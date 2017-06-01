@@ -1,0 +1,37 @@
+#!/usr/bin/zep-1.14
+
+import eeg_markers;
+
+start() {
+
+    time tref = now();
+    send_marker(99);
+    tref = tref + 100ms;
+
+    setup_marker_at(1, tref);
+    tref = tref + 100ms;
+
+    setup_marker_at(2, tref);
+    tref = tref + 100ms;
+
+    setup_marker_at(3, tref);
+    tref = tref + 100ms;
+
+    setup_marker_at(10, tref);
+    tref = tref + 100ms;
+
+    setup_marker_at(100, tref);
+    tref = tref + 100ms;
+
+    setup_marker_at(255, tref);
+    tref = tref + 100ms;
+
+    TheFinisher.start(tref);
+}
+
+Timer TheFinisher {
+    on_event:expire()
+    {
+        terminate;
+    }
+}

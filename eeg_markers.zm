@@ -1,0 +1,135 @@
+plugin zep_digio;
+
+// If set to "" the module will attempt to open the device at logical places
+// If it can't find it, try /dev/ttyAM0
+// default: ""
+const string DEVICE_ADDRESS = "";
+
+// Length that the marker needs to be active in order to be registered
+// default: 20ms
+const dur PULSE_LENGTH = 20ms;
+
+// Sends the marker as quick as possible
+// Returns true at successfull setup
+bool send_marker(int marker) {
+    return setup_marker_at(marker, now());
+}
+
+// Sends the marker at a specified time with an optional pulse length.
+// Returns true at successfull setup
+bool setup_marker_at(int marker, time tref, dur pulse_length = PULSE_LENGTH) {
+    if(!check_marker(marker, tref,pulse_length)) return false;
+
+    marker_device.setup_marker_at(marker, tref, pulse_length);
+
+    return true;
+}
+
+// Quickly checks the marker for timing and range issues
+bool check_marker(int marker, time tref, dur pulse_length)
+{
+    // check marker range
+    if(marker < 1 || marker > 255 )
+    {
+        print_error("!! WARNING - Marker " + string(marker) + " is outside of range (1-255) !!\n");
+        return false;
+    }
+
+    // check timing to previous marker
+    dur time_difference_last_marker = tref - marker_device.previous_marker_time;
+    if( time_difference_last_marker < marker_device.previous_marker_pulse_length/2)
+    {
+        print_error("!! WARNING - Marker " + string(marker) + " is set too quickly after previous trigger and might overlap (" + string(time_difference_last_marker) + ") !!\n");
+        return false;
+    }
+
+    // check pulse length
+    if(pulse_length <= 0ms )
+    {
+        print_error("!! WARNING - Marker " + string(marker) + "'s pulse length is set to 0 or below (" + string(pulse_length) + "), this doesn't make any sense !!\n");
+        return false;
+    }
+
+    return true;
+}
+
+BeexyBox marker_device
+{
+    int mask_bit_size;
+
+    time previous_marker_time;
+    dur previous_marker_pulse_length;
+
+    on_event:init()
+    {
+        // lets start up the party
+        if(!start_device()) terminate;
+
+        // init some variables
+        mask_bit_size = 8; // we only have 8 outputs to work with
+        previous_marker_pulse_length = PULSE_LENGTH;
+    }
+
+    // Open the connection to the BeexyBox device
+    bool start_device(string device_address = DEVICE_ADDRESS)
+    {
+        if(device_address != "")
+            this.open(device_address);
+        else
+            this.open();
+
+        if(!this.is_open)
+        {
+            if(device_address == "")
+                print_error("!! ERROR - Marker module was unable to open BeexyBox device !!\n");
+            else
+                print_error("!! ERROR - Marker module was unable to open BeexyBox device at "+DEVICE_ADDRESS+" !!\n");
+            return false;
+        }
+
+        return true;
+    }
+
+    void setup_marker_at(int marker, time tref, dur pulse_length)
+    {
+        // Send actual marker
+        send_marker_at(marker, tref, pulse_length);
+
+        // Update track record of markers
+        previous_marker_time = tref;
+        previous_marker_pulse_length = pulse_length;
+
+        // Log the setup operation
+
+    }
+
+    // Sends the marker at the specified time and pulse_length
+    //
+    // Uses a bit wise operation:
+    // For example for marker 3 (int) or 000000011 (byte)
+    // it left shifts 1 (int) output_line times and does an AND operation
+    // over both this shifted and the marker byte. For output_line 1:
+    // 000000011 (marker byte)
+    // 000000010 (left-shifted line)
+    // 000000010 <= NOT 0 so true; we need to set this output line.
+    void send_marker_at(int marker, time tref, dur pulse_length)
+    {
+        int output_line = 0;
+        while( output_line < this.mask_bit_size)
+        {
+            if( marker & (1 << output_line))
+                this.start_output(output_line, tref, pulse_length);
+            output_line++;
+        }
+    }
+
+    void log(int marker, time tref, dur pulse_length)
+    {
+        //TODO
+    }
+
+    on_event:cleanup()
+    {
+        this.close();
+    }
+}
