@@ -53,10 +53,9 @@ first 10 pin of the parallel port. Here we use a ribbon cable and a 37-pin sub-d
 Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuring, monitoring and testing BeexyBox devices) to see if you can actually connect to the BeexyBox (_e.g._ `bxymonitor /dev/ttyACM0`).
 
 
-### Errors when sending more than one marker at the same time
-Sending two markers at the same time is not possible. Hence there is a minimal
-required interval between two markers. This interval is half the pulse length of the first
-marker. The only solution is to redesign your experiment.
+### Errors when sending more than one marker simultaneously
+Sending two markers simultaneously or within a certain interval is not possible. A marker consists of a pulse-up and a pulse-down phase. The interval between up and down is the pulse length. During this interval when one pulse is active another cannot start. The pulse down needs to finish before a pulse up can be start. Hence a minimal pause between two markers is necessary. By default this required interval or pause is half the pulse length of the first marker.
+The solution is to redesign your experiment so sending two or more markers simultaneously does not happen.
 
 ### The timing of the markers varies a lot
 Make sure you avoid using `send_marker()`. Use `send_marker()` if you want to insert a marker and care nothing for the accuracy of timing.
