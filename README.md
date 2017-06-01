@@ -12,8 +12,11 @@ to send markers (i.e. triggers) from your Zep experiment to a parallel input por
 1.  Within your experiment import the module by adding `import eeg_markers;` to
 the top of your `.zp` file.
 1.  Within your experiment script, after setting up the presentation of a
-stimuli add the following function call: `setup_marker_at(<int marker> ,<time tref>);`.
-With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus you have setup.
+stimulus add the following function call:
+
+    `setup_marker_at(<int marker> ,<time tref>);`
+
+    With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
 
 # Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask
