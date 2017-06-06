@@ -28,7 +28,7 @@ start() {
     setup_marker_at(5, tref+4010ms);
 
     println("...");
-    println("Setting up a conflicting marker 5 on 4s50ms (should _not_ conflict with marker 4 on 4s)");
+    println("Setting up a NOT conflicting marker 5 on 4s50ms");
     setup_marker_at(5, tref+4050ms);
 
     println("...");
@@ -47,22 +47,15 @@ start() {
     // the scheduler might not get enough cycles to do its job correctly
     // and in a timely matter
     // Uncomment the next line to test scheduler overloading
-    //overload_scheduler(tref+5s);
+    overload_scheduler(tref+5s);
 
     println("Loading markers is done. Press Ctrl+C when marking has finished or to abort.");
-}
-
-Timer TheFinisher {
-    on_event:expire()
-    {
-        terminate;
-    }
 }
 
 void overload_scheduler(time tref)
 {
     int number_of_markers = 1000;
-    println("Setting up a "+ number_of_markers + " markers at 100ms intervals");
+    println("Setting up a "+ number_of_markers + " additional markers at 100ms intervals");
     time tic = now();
     int index = 0;
     while(index < number_of_markers)
@@ -71,5 +64,6 @@ void overload_scheduler(time tref)
         index++;
     }
     time tock = now();
-    println("Adding these took " + string(tock-tic) + ". Finished at " + tock);
+    println("Finished at " + tock + ". Adding these " + number_of_markers + " took " + string(tock-tic) + ".");
+    println("During this time the scheduler was overloaded causing it to fail scheduling or pre-empting markers in a timely fashion.");
 }

@@ -5,7 +5,7 @@ plugin zep_math;
 // If set to "" the module will attempt to open the device at logical places
 // If it can't find it, try /dev/ttyACM0
 // default: ""
-const string DEVICE_ADDRESS = "/dev/ttyACM1";
+const string DEVICE_ADDRESS = "/dev/ttyACM0";
 
 // Length that the marker needs to be active in order to be registered
 // default: 20ms
@@ -33,7 +33,7 @@ bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH) {
 // Sends the marker as quick as possible
 // Returns true at successfull setup
 bool send_marker(int number, dur pulse_length = PULSE_LENGTH) {
-    return setup_marker_at(number, now()+SCHEDULER_PRE_EMPT, pulse_length);
+    return setup_marker_at(number, now()+SCHEDULER_PRE_EMPT+SCHEDULER_PRE_EMPT_ERROR_TOLERANCE, pulse_length);
 }
 
 // Record to hold Marker information
@@ -122,13 +122,12 @@ Thingy marker_planner
         {
             Marker next_in_line = marker_planner.pop();
 
-            // We give some leeway but there is a maximum TOLERANCE between the
-            // actual expire time and the execution of the expire event
-            time current_time = now();
-            dur timing_off_set = expire_time - current_time;
-            if( timing_off_set > SCHEDULER_PRE_EMPT_ERROR_TOLERANCE )
-                print_schedule_error(next_in_line, timing_off_set);
-                // next_in_line was already popped
+            dur timing_off_set = now() - expire_time;
+            if(timing_off_set > SCHEDULER_PRE_EMPT_ERROR_TOLERANCE)
+            {
+                print_error("!! ERROR - Marker " + next_in_line.number +" failed to be pre-empted on time (" + string(timing_off_set) + " too late) !!\n");
+                print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
+            }
             else
             {
                 marker_device.transfer_marker(next_in_line);
@@ -141,35 +140,28 @@ Thingy marker_planner
     // Starts to (re)schedule the pre-empt loading of markers
     void reschedule()
     {
-        if(scheduled_markers.size == 0) return; // Just stop if we ran out of markers
+        // Just stop if we ran out of markers
+        if(scheduled_markers.size == 0) return;
 
         Marker next_in_line = scheduled_markers[scheduled_markers.size-1];
         time next_in_line_scheduler_onset = next_in_line.onset - SCHEDULER_PRE_EMPT;
 
+        // We do not abort or change if the next in line marker timing hasn't changed.
+        if(next_in_line_scheduler_onset == scheduler.expected_expire_time && scheduler.is_running) return;
+
         time current_time = now();
-        dur timing_off_set = next_in_line_scheduler_onset - current_time;
-        if( timing_off_set > 0s && (timing_off_set) < SCHEDULER_PRE_EMPT_ERROR_TOLERANCE )
+        if(next_in_line_scheduler_onset <= current_time) // we are too late! Oh noes!
         {
-            print_schedule_error(next_in_line, timing_off_set);
+            print_error("!! ERROR - Marker " + next_in_line.number +" failed to be scheduled to pre-empt on time (" + string(current_time-next_in_line_scheduler_onset) + " too late) !!\n");
             pop(); // drop the next marker
+            print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
             reschedule(); // restart (re)scheduling the next marker in line
         }
         else
         {
-            // We do not abort if the next in line marker hasn't changed.
-            if(next_in_line_scheduler_onset != scheduler.expected_expire_time)
-            {
-                println("scheduler missmatch with: " + next_in_line.number);
-                scheduler.abort();
-                scheduler.start(next_in_line_scheduler_onset);
-            }
+            scheduler.abort();
+            scheduler.start(next_in_line_scheduler_onset);
         }
-    }
-
-    void print_schedule_error(Marker mark, dur timing_off_set)
-    {
-        print_error("!! ERROR - Marker " + mark.number +" failed by scheduler to pre-empt on time (" + string(timing_off_set) + " after) !!\n");
-        print_error("!! ERROR - Marker " + mark.number + " dropped !!\n");
     }
 
     bool add(Marker mark)
