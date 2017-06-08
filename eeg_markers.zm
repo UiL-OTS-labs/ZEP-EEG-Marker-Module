@@ -1,6 +1,7 @@
 plugin zep_digio;
 plugin zep_misc;
 plugin zep_math;
+plugin zep_file;
 
 // If set to "" the module will attempt to open the device at logical places
 // If it can't find it, try /dev/ttyACM0
@@ -48,6 +49,8 @@ BeexyBox marker_device
 {
     int mask_bit_size;
     int max_number;
+    int log_number;
+    time init_time;
 
     on_event:init()
     {
@@ -56,7 +59,37 @@ BeexyBox marker_device
 
         // init some variables
         mask_bit_size = 8; // we only have 8 outputs to work with
+        log_number = 0;
         max_number = int(exp(2,mask_bit_size))-1;
+        init_time = now();
+
+        // start the log file
+        setup_log();
+    }
+
+    bool setup_log()
+    {
+        string log_directory_name = "marker-logs";
+        string header = "date;target_timing(ms);marker;status\r\n";
+        //Ensure existence
+        if(!file_exists(log_directory_name))
+            create_dir(log_directory_name);
+
+        //Check access
+        if(
+            file_type(log_directory_name) != FILE_TYPE_DIRECTORY ||
+            !file_writable(log_directory_name)
+        )
+        {
+            print_error("!! Warning - Could not open log directory !!");
+            return false;
+        }
+
+        open_log(log_number, log_directory_name + "/" + format_wt(now(), TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM) + "-" + log_number + ".log");
+        log(log_number, "## Zero time: " + format_wt(init_time) + "\r\n");
+        log(log_number, header);
+
+        return true;
     }
 
     // Open the connection to the BeexyBox device
@@ -97,10 +130,34 @@ BeexyBox marker_device
                 this.start_output(output_line, mark.onset, mark.pulse_length);
             output_line++;
         }
+
+        this.log_marker(mark, true, "transferred");
+    }
+
+    // Logs the marker with status call
+    void log_marker(Marker mark, bool succes, string status)
+    {
+        dur target_time = mark.onset - init_time;
+
+        //date;target_timing(ms);marker;status
+        string delimiter = ";";
+        string line =
+            format_wt(now()) + delimiter
+            + string(real(target_time)) + delimiter
+            + mark.number + delimiter
+            + string(succes) + delimiter
+            +  status + "\r\n";
+
+        log(this.log_number, line);
     }
 
     on_event:cleanup()
     {
+        // Log related closures
+        flush_log(log_number);
+        close_log(log_number);
+
+        // Close the connection to the device
         this.close();
     }
 }
@@ -114,7 +171,7 @@ Thingy marker_planner
     on_event:init()
     {
         scheduled_markers.size    = 0;
-        scheduled_markers.capacity = 100;
+        scheduled_markers.capacity = 5;
     }
 
     Timer scheduler {
@@ -127,6 +184,7 @@ Thingy marker_planner
             {
                 print_error("!! ERROR Overloading - Marker " + next_in_line.number +" failed to be pre-empted on time (" + string(timing_off_set) + " too late) !!\n");
                 print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
+                marker_device.log_marker(next_in_line, false, "scheduling");
             }
             else
             {
@@ -156,6 +214,7 @@ Thingy marker_planner
             pop(); // drop the next marker
             print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
             reschedule(); // restart (re)scheduling the next marker in line
+            marker_device.log_marker(next_in_line, false, "scheduling");
         }
         else
         {
@@ -166,7 +225,11 @@ Thingy marker_planner
 
     bool add(Marker mark)
     {
-        if(!valid_marker(mark)) return false;
+        if(!valid_marker(mark))
+        {
+            marker_device.log_marker(mark, false, "validation");
+            return false;
+        }
 
         // add marker to the stack
         scheduled_markers.size = scheduled_markers.size+1;
@@ -279,12 +342,12 @@ Thingy marker_planner
     void dump_schedule()
     {
         println("---");
-        println("index\tnumber\tonset\t\t\t\tpulse_length");
+        println("index\tnumber\tonset\t\tpulse_length");
         int index = scheduled_markers.size-1;
         while(index >= 0)
         {
             Marker m = scheduled_markers[index];
-            println(string(index) + ": \t" + string(m.number) + "\t" + m.onset + "\t" + m.pulse_length);
+            println(string(index) + ": \t" + string(m.number) + "\t" + format_wt(m.onset, TIME_FORMAT_TIME_HHMMSS_MICROS) + "\t" + m.pulse_length);
             index--;
         }
         println("...");
