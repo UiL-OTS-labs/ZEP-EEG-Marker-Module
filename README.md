@@ -24,7 +24,7 @@ This will setup a marker to be send as quickly as possible. The shortest time be
 # Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
 
-### Module cannot find the device
+### Troubleshooting: Module cannot find the device
 
 #### Check the `DEVICE_ADDRESS`
 Sometimes the BeexyBox X device is not automagically found.
@@ -55,7 +55,7 @@ first 10 pin of the parallel port. Here we use a ribbon cable and a 37-pin sub-d
 Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuring, monitoring and testing BeexyBox devices) to see if you can actually connect to the BeexyBox (_e.g._ `bxymonitor /dev/ttyACM0`).
 
 
-### Warnings when sending more than one marker simultaneously
+### Troubleshooting: Warnings when sending more than one marker simultaneously
     `!! WARNING - Marker 5's onset conflicts with a marker (4) that has already been scheduled !!`
 Sending two markers simultaneously is not possible. A marker consists of a pulse-up and a pulse-down phase. The interval between up and down is the pulse length or duration. During this pulse we are sending a marker and another cannot start. The pulse _down_ needs to finish before a pulse _up_ can start. Hence there is a minimal pause between two marker onsets. By default this pause is the pulse length of the first marker plus some scheduling time. The module uses a scheduler that requires extra time for planning and transferring the marker data. This extends the actual required time for a marker.
 
@@ -63,7 +63,7 @@ For instance, if the marker' `pulse_length` is 20ms (default) and the `SCHEDULER
 
 The solution is to redesign your experiment so sending two or more markers at nearly the same time does not happen.
 
-### Overloading the scheduler
+### Troubleshooting: Overloading the scheduler
     `!! ERROR Overloading - Marker 9 failed to be pre-empted on time (1287.166ms too late) !!`
     `!! ERROR Overloading - Marker 1 failed to be scheduled to pre-empt on time (294.923ms too late) !!`
 
@@ -71,7 +71,7 @@ The scheduler fires slightly before the onset timing of an marker. When the sche
 
 The solution is to lighten the load on the CPU during crucial and marked parts of your experiment. For instance, try to shuffle at the start of the experiment instead of at the start of a trial.
 
-### The timing of the markers in the recording varies too much
+### Troubleshooting: The timing of the markers in the recording varies too much
 Make sure you avoid using `send_marker()`. Use `send_marker()` if you want to insert a marker and care nothing for the accuracy of timing.
 
 Try to use `setup_marker_at()` with the _expected_start_time_ of your stimulus object.
@@ -79,7 +79,7 @@ If using this function creates variation creates jitter something might be wrong
 
 Note that the scheduler has some tolerance for scheduling-timing variance when sending the marker to the marker-sending device. The actual marker time is unaffected when the variance falls within this tolerance.
 
-### EEG recordings with ActiView (Biosemi Software) suddenly pauses for no good reason
+### Troubleshooting: EEG recordings with ActiView (Biosemi Software) suddenly pauses for no good reason
 ActiView can be [configured](https://www.biosemi.com/faq/trigger_signals.htm) to start a pause or stop a pause on specific markers.
 Check the .cfg you feed Actiview for the following:
 
