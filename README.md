@@ -17,10 +17,9 @@ the top of your `.zp` file.
 stimulus add the following function call:
     `setup_marker_at(<int marker> ,<time tref>);`
 With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
-
 1.  Alternatively if you want to send a marker directly you can use:
     `send_marker(<int marker>);`
-This will setup a marker at the earliest possibility. Which is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE`. By default this is 7.5ms.
+This will setup a marker to be send as quickly as possible. The shortest time before the marker is sent is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings this is 7.5ms.
 
 # Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
