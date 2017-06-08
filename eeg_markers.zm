@@ -49,7 +49,8 @@ const string LOG_FILE_DIRECTORY = "marker-logs";
 
 // Sends the marker at a specified time with an optional pulse length.
 // Returns true at successfull setup
-bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH) {
+bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
+{
 
     Marker new_marker;
     new_marker.number       = number;
@@ -62,7 +63,8 @@ bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH) {
 
 // Sends the marker as quick as possible
 // Returns true at successfull setup
-bool send_marker(int number, dur pulse_length = PULSE_LENGTH) {
+bool send_marker(int number, dur pulse_length = PULSE_LENGTH)
+{
     return setup_marker_at(number, now()+SCHEDULER_PRE_EMPT+SCHEDULER_PRE_EMPT_ERROR_TOLERANCE, pulse_length);
 }
 
