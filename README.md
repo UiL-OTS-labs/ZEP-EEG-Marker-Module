@@ -56,7 +56,8 @@ first 10 pin of the parallel port. Here we use a ribbon cable and a 37-pin sub-d
 Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuring, monitoring and testing BeexyBox devices) to see if you can actually connect to the BeexyBox (_e.g._ `bxymonitor /dev/ttyACM0`).
 
 
-### Errors when sending more than one marker simultaneously
+### Warnings when sending more than one marker simultaneously
+    `!! WARNING - Marker 5's onset conflicts with a marker (4) that has already been scheduled !!`
 Sending two markers simultaneously is not possible. A marker consists of a pulse-up and a pulse-down phase. The interval between up and down is the pulse length or duration. During this pulse we are sending a marker and another cannot start. The pulse _down_ needs to finish before a pulse _up_ can start. Hence there is a minimal pause between two marker onsets. By default this pause is the pulse length of the first marker plus some scheduling time. The module uses a scheduler that requires extra time for planning and transferring the marker data. This extends the actual required time for a marker.
 
 For instance, if the marker' `pulse_length` is 20ms (default) and the `SCHEDULER_PRE_EMPT` setting is 5ms (default) the marker has a minimum of 25ms. Within this 25ms period no other markers can be set.
@@ -71,7 +72,7 @@ The scheduler fires slightly before the onset timing of an marker. When the sche
 
 The solution is to lighten the load on the CPU during crucial and marked parts of your experiment. For instance, try to shuffle at the start of the experiment instead of at the start of a trial.
 
-### The timing of the markers varies a lot
+### The timing of the markers in the recording varies too much
 Make sure you avoid using `send_marker()`. Use `send_marker()` if you want to insert a marker and care nothing for the accuracy of timing.
 
 Try to use `setup_marker_at()` with the _expected_start_time_ of your stimulus object.
