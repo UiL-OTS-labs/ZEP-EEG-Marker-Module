@@ -5,6 +5,9 @@ to send markers (i.e. triggers) from your Zep experiment to a parallel input por
 
 The marker uses an external device which sends the actual markers. Markers (including their timings) are transferred to this device sometime before their required onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. This _pre-emptive_ loading scheme limits the frequency you can send markers at. This limit is ~40 Hz (25ms intervals).
 
+## Logs
+The module logs marker status in a date-formated file in a `markers-log` directory.
+
 ## Requirements for this module
 *   Zep version 1.14.4 or later
 *   [BeexyBox type X](https://www.beexy.nl/responseboxes/)
