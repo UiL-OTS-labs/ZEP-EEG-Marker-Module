@@ -36,7 +36,7 @@ bool send_marker(int number, dur pulse_length = PULSE_LENGTH) {
     return setup_marker_at(number, now()+SCHEDULER_PRE_EMPT+SCHEDULER_PRE_EMPT_ERROR_TOLERANCE, pulse_length);
 }
 
-// Record to hold Marker information
+// Record to hold Marker information ( for internal module usage )
 record Marker
 {
     int number;
@@ -79,7 +79,7 @@ BeexyBox marker_device
         return true;
     }
 
-    // Sends the marker at the specified time and pulse_length
+    // Sends the marker
     //
     // Uses a bit wise operation:
     // For example for marker 3 (int) or 000000011 (byte)
