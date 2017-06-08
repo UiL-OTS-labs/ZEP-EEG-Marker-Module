@@ -1,5 +1,7 @@
 #!/usr/bin/zep-1.14
 
+requires 1.14.4;
+
 import eeg_markers;
 
 start() {
@@ -8,7 +10,7 @@ start() {
     time tref = now();
 
     println("...");
-    println("Setting up marker 2 on 2s");
+    println("Setting up marker 2 on to be sent on 2s from now");
     setup_marker_at(2, tref+2s);
 
     println("...");
@@ -24,11 +26,11 @@ start() {
     setup_marker_at(5, tref+4s);
 
     println("...");
-    println("Setting up a conflicting marker 5 on 4s10ms (should conflict with marker 4 on 4s)");
+    println("Setting up a conflicting marker 5 on 4.010s (should conflict with marker 4 on 4s)");
     setup_marker_at(5, tref+4010ms);
 
     println("...");
-    println("Setting up a NOT conflicting marker 5 on 4s50ms");
+    println("Setting up a NON conflicting marker 5 on 4.050s");
     setup_marker_at(5, tref+4050ms);
 
     println("...");
@@ -39,9 +41,7 @@ start() {
     println("Firing 'nearly' direct marker 9");
     send_marker(9);
 
-    println("...");
-    println("Overview scheduled markers at " + now());
-    marker_planner.dump_schedule();
+    scheduler.dump_schedule();
 
     // If Zep or the CPU is very (very) busy at the time of scheduling
     // the scheduler might not get enough cycles to do its job correctly
@@ -49,7 +49,7 @@ start() {
     // Uncomment the next line to test scheduler overloading
     //overload_scheduler(tref+5s);
 
-    println("Loading markers is done. Press Ctrl + 'c' when marking has finished or to abort.");
+    println("Loading and scheduling markers has finished. Press Ctrl + 'c' when actual marking has finished or to abort.");
 }
 
 void overload_scheduler(time tref)
