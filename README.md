@@ -3,6 +3,8 @@
 This [Zep](https://www.beexy.nl/zep/wiki/doku.php) module provides a way
 to send markers (i.e. triggers) from your Zep experiment to a parallel input port. One such input port is the USB receiver of the BioSemi EEG equipment. This allows you to send markers with Zep! Jeej.
 
+The marker uses an external device which sends the actual markers. Markers (including their timing) are transferred to this device sometime before their onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will transfer them to the device milliseconds before their onset. This _pre-emptive_ loading scheme limits the frequency you can send markers at. This limit is ~40 Hz (25ms intervals).
+
 ## Requirements for this module
 *   Zep version 1.14.4 or later
 *   [BeexyBox type X](https://www.beexy.nl/responseboxes/)
@@ -13,14 +15,15 @@ to send markers (i.e. triggers) from your Zep experiment to a parallel input por
 the top of your `.zp` file.
 1.  Within your experiment script, after setting up the presentation of a
 stimulus add the following function call:
-
     `setup_marker_at(<int marker> ,<time tref>);`
+With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
 
-    With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
+1.  Alternatively if you want to send a marker directly you can use:
+    `send_marker(<int marker>);`
+This will setup a marker at the earliest possibility. Which is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE`. By default this is 7.5ms.
 
 # Troubleshooting
-Below are some common problems and their solutions. If these do not work please ask
-your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
+Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
 
 ### Module cannot find the device
 
@@ -54,14 +57,24 @@ Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuri
 
 
 ### Errors when sending more than one marker simultaneously
-Sending two markers simultaneously or within a certain interval is not possible. A marker consists of a pulse-up and a pulse-down phase. The interval between up and down is the pulse length. During this interval when one pulse is active another cannot start. The pulse down needs to finish before a pulse up can be start. Hence a minimal pause between two markers is necessary. By default this required interval or pause is half the pulse length of the first marker.
-The solution is to redesign your experiment so sending two or more markers simultaneously does not happen.
+Sending two markers simultaneously is not possible. A marker consists of a pulse-up and a pulse-down phase. The interval between up and down is the pulse length or duration. During this pulse we are sending a marker and another cannot start. The pulse _down_ needs to finish before a pulse _up_ can start. Hence there is a minimal pause between two marker onsets. By default this pause is the pulse length of the first marker plus some scheduling time. The module uses a scheduler that requires extra time for planning and transferring the marker data. This extends the actual required time for a marker.
+
+For instance, if the marker' `pulse_length` is 20ms (default) and the `SCHEDULER_PRE_EMPT` setting is 5ms (default) the marker has a minimum of 25ms. Within this 25ms period no other markers can be set.
+
+The solution is to redesign your experiment so sending two or more markers at nearly the same time does not happen.
+
+### Overloading the scheduler
+The scheduler fires slightly before the onset timing of an marker. When the scheduler fires (i.e. _expires_) it needs some CPU time to preemptively transfer the marker to the marker device. If the transfer does not occur on time the scheduler is considered _being overloaded_. This overload can result in a cascade of failed markers.
+
+The solution is to lighten the load on the CPU during crucial and marked parts of your experiment. For instance, try to shuffle at the start of the experiment instead of at the start of a trial.
 
 ### The timing of the markers varies a lot
 Make sure you avoid using `send_marker()`. Use `send_marker()` if you want to insert a marker and care nothing for the accuracy of timing.
 
 Try to use `setup_marker_at()` with the _expected_start_time_ of your stimulus object.
 If using this function creates variation creates jitter something might be wrong with the way you setup the stimulus objects. Make sure you check for discrepancies between the _expected_start_time_ and the actual _start_time_ of you stimulus objects.
+
+Note that the scheduler has some tolerance for scheduling-timing variance when sending the marker to the marker-sending device. The actual marker time is unaffected when the variance falls within this tolerance.
 
 ### EEG recordings with ActiView (Biosemi Software) suddenly pauses for no good reason
 ActiView can be [configured](https://www.biosemi.com/faq/trigger_signals.htm) to start a pause or stop a pause on specific markers.

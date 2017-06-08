@@ -3,35 +3,67 @@
 import eeg_markers;
 
 start() {
+    println("#### Running some tests ####");
 
     time tref = now();
-    send_marker(99);
-    tref = tref + 100ms;
 
-    setup_marker_at(1, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up marker 2 on 2s");
+    setup_marker_at(2, tref+2s);
 
-    setup_marker_at(2, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up marker 4 on 4s");
+    setup_marker_at(4, tref+4s);
 
-    setup_marker_at(3, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up marker 3 on 3s");
+    setup_marker_at(3, tref+3s);
 
-    setup_marker_at(10, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up a conflicting marker 5 on 4s (should conflict with marker 4 on 4s)");
+    setup_marker_at(5, tref+4s);
 
-    setup_marker_at(100, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up a conflicting marker 5 on 4s10ms (should conflict with marker 4 on 4s)");
+    setup_marker_at(5, tref+4010ms);
 
-    setup_marker_at(255, tref);
-    tref = tref + 100ms;
+    println("...");
+    println("Setting up a NOT conflicting marker 5 on 4s50ms");
+    setup_marker_at(5, tref+4050ms);
 
-    TheFinisher.start(tref);
+    println("...");
+    println("Setting up marker 1 on 1s");
+    setup_marker_at(1, tref+1s);
+
+    println("...");
+    println("Firing 'nearly' direct marker 9");
+    send_marker(9);
+
+    println("...");
+    println("Overview scheduled markers at " + now());
+    marker_planner.dump_schedule();
+
+    // If Zep or the CPU is very (very) busy at the time of scheduling
+    // the scheduler might not get enough cycles to do its job correctly
+    // and in a timely matter
+    // Uncomment the next line to test scheduler overloading
+    //overload_scheduler(tref+5s);
+
+    println("Loading markers is done. Press Ctrl + 'c' when marking has finished or to abort.");
 }
 
-Timer TheFinisher {
-    on_event:expire()
+void overload_scheduler(time tref)
+{
+    int number_of_markers = 1000;
+    println("Setting up a "+ number_of_markers + " additional markers at 100ms intervals");
+    time tic = now();
+    int index = 0;
+    while(index < number_of_markers)
     {
-        terminate;
+        setup_marker_at(6, tref + 4s + (index*100ms) );
+        index++;
     }
+    time tock = now();
+    println("Finished at " + tock + ". Adding these " + number_of_markers + " took " + string(tock-tic) + ".");
+    println("During this time the scheduler was overloaded causing it to fail scheduling or pre-empting markers in a timely fashion.");
 }
