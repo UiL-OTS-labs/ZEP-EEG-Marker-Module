@@ -47,7 +47,7 @@ start() {
     // the scheduler might not get enough cycles to do its job correctly
     // and in a timely matter
     // Uncomment the next line to test scheduler overloading
-    //overload_scheduler(tref+5s);
+    overload_scheduler(tref+5s);
 
     println("Loading markers is done. Press Ctrl + 'c' when marking has finished or to abort.");
 }

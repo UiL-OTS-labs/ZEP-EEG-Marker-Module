@@ -125,7 +125,7 @@ Thingy marker_planner
             dur timing_off_set = now() - expire_time;
             if(timing_off_set > SCHEDULER_PRE_EMPT_ERROR_TOLERANCE)
             {
-                print_error("!! ERROR - Marker " + next_in_line.number +" failed to be pre-empted on time (" + string(timing_off_set) + " too late) !!\n");
+                print_error("!! ERROR Overloading - Marker " + next_in_line.number +" failed to be pre-empted on time (" + string(timing_off_set) + " too late) !!\n");
                 print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
             }
             else
@@ -152,7 +152,7 @@ Thingy marker_planner
         time current_time = now();
         if(next_in_line_scheduler_onset <= current_time) // we are too late! Oh noes!
         {
-            print_error("!! ERROR - Marker " + next_in_line.number +" failed to be scheduled to pre-empt on time (" + string(current_time-next_in_line_scheduler_onset) + " too late) !!\n");
+            print_error("!! ERROR Overloading - Marker " + next_in_line.number +" failed to be scheduled to pre-empt on time (" + string(current_time-next_in_line_scheduler_onset) + " too late) !!\n");
             pop(); // drop the next marker
             print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
             reschedule(); // restart (re)scheduling the next marker in line

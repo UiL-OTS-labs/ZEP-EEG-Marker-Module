@@ -64,6 +64,9 @@ For instance, if the marker' `pulse_length` is 20ms (default) and the `SCHEDULER
 The solution is to redesign your experiment so sending two or more markers at nearly the same time does not happen.
 
 ### Overloading the scheduler
+    `!! ERROR Overloading - Marker 9 failed to be pre-empted on time (1287.166ms too late) !!`
+    `!! ERROR Overloading - Marker 1 failed to be scheduled to pre-empt on time (294.923ms too late) !!`
+
 The scheduler fires slightly before the onset timing of an marker. When the scheduler fires (i.e. _expires_) it needs some CPU time to preemptively transfer the marker to the marker device. If the transfer does not occur on time the scheduler is considered _being overloaded_. This overload can result in a cascade of failed markers.
 
 The solution is to lighten the load on the CPU during crucial and marked parts of your experiment. For instance, try to shuffle at the start of the experiment instead of at the start of a trial.
