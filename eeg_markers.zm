@@ -29,11 +29,10 @@ plugin zep_math;
 plugin zep_file;
 
 
-// If set to "" the module will attempt to open the device at logical places
-// If it can't find it, try /dev/ttyACM0
-// default: ""
-const string DEVICE_ADDRESS = "";
-// const string DEVICE_ADDRESS = "/dev/ttyACM0";
+// If set to "" the module will let the BeexyBox object decide the Beexybox.
+// If it can't find it, try replacing the address with /dev/ttyACM1
+// default: "/dev/ttyACM0"
+const string DEVICE_ADDRESS = "/dev/ttyACM0";
 // const string DEVICE_ADDRESS = "COM1";
 
 // Length that the marker needs to be active in order to be registered
