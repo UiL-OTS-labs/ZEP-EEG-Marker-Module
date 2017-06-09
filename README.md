@@ -3,10 +3,10 @@
 This [Zep](https://www.beexy.nl/zep/wiki/doku.php) module provides a way
 to send markers (i.e. triggers) from your Zep experiment to a parallel input port. One such input port is the USB receiver of the BioSemi EEG equipment. This allows you to send markers with Zep! Jeej.
 
-The modules uses an external BeexyBox which sends the actual markers. Markers (including their timings) are transferred to the BeexyBox sometime before their required onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. This _pre-emptive_ loading scheme limits the frequency you can send markers at. This limit is ~40 Hz (25ms intervals).
+The modules uses an external BeexyBox which sends the actual markers. Markers (including their timings) are transferred to the BeexyBox sometime before their required onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. The scheduler limits the frequency you can send markers at. This limit is ~40 Hz (or at 25ms intervals).
 
 ## Logs
-The module logs marker status in a date-formated file in a `markers-log` directory.
+The module logs the status of failed and succesfully transferred markers in a date-formated file in a `markers-log` directory.
 
 ## Requirements for this module
 *   Zep version 1.14.4 or later
@@ -21,12 +21,12 @@ stimulus add the following function call:
 
     `setup_marker_at(<int marker> ,<time tref>);`
     
-With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
-1.  Alternatively, you might want to send a marker as quickly as possible. Use the following function call for that:
+    With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been setup.
+4.  Alternatively, you might want to send a marker as quickly as possible. Use the following function call for that:
 
     `send_marker(<int marker>);`
     
-This will setup a marker to be sent as quickly as possible. Because of internal logistics there is a short delay before the marker will be actually send. This delay is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings the delay is around 7.5ms.
+    This will setup a marker to be sent as quickly as possible. Because of internal logistics there is a short delay before the marker will be actually send. This delay is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings the delay is around 7.5ms.
 
 # Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
