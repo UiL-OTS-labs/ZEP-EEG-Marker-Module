@@ -3,7 +3,7 @@
 This [Zep](https://www.beexy.nl/zep/wiki/doku.php) module provides a way
 to send markers (i.e. triggers) from your Zep experiment to a parallel input port. One such input port is the USB receiver of the BioSemi EEG equipment. This allows you to send markers with Zep! Jeej.
 
-The modules uses an external BeexyBox which sends the actual markers. Markers (including their timings) are transferred to this device sometime before their required onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. This _pre-emptive_ loading scheme limits the frequency you can send markers at. This limit is ~40 Hz (25ms intervals).
+The modules uses an external BeexyBox which sends the actual markers. Markers (including their timings) are transferred to the BeexyBox sometime before their required onset. The device can hold one marker at a time. Hence, if you setup markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. This _pre-emptive_ loading scheme limits the frequency you can send markers at. This limit is ~40 Hz (25ms intervals).
 
 ## Logs
 The module logs marker status in a date-formated file in a `markers-log` directory.
