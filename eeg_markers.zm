@@ -32,7 +32,9 @@ plugin zep_file;
 // If set to "" the module will attempt to open the device at logical places
 // If it can't find it, try /dev/ttyACM0
 // default: ""
-const string DEVICE_ADDRESS = "/dev/ttyACM0";
+const string DEVICE_ADDRESS = "";
+// const string DEVICE_ADDRESS = "/dev/ttyACM0";
+// const string DEVICE_ADDRESS = "COM1";
 
 // Length that the marker needs to be active in order to be registered
 // default: 20ms
@@ -48,24 +50,27 @@ const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
 const string LOG_FILE_DIRECTORY = "marker-logs";
 
 // Sends the marker at a specified time with an optional pulse length.
-// Returns true at successfull setup
+// Returns true at successful setup
 bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
 {
-
     Marker new_marker;
     new_marker.number       = number;
     new_marker.onset        = onset;
     new_marker.pulse_length = pulse_length;
-    if(!scheduler.add(new_marker)) return false;
+    if (!scheduler.add(new_marker)) return false;
 
     return true;
 }
 
-// Sends the marker as quick as possible
-// Returns true at successfull setup
+// Sends the marker as quickly as possible
+// Returns true at successful setup
 bool send_marker(int number, dur pulse_length = PULSE_LENGTH)
 {
-    return setup_marker_at(number, now()+SCHEDULER_PRE_EMPT+SCHEDULER_PRE_EMPT_ERROR_TOLERANCE, pulse_length);
+    return setup_marker_at(
+            number,
+            now() + SCHEDULER_PRE_EMPT + SCHEDULER_PRE_EMPT_ERROR_TOLERANCE,
+            pulse_length
+            );
 }
 
 // Record to hold Marker information ( for internal module usage )
@@ -95,9 +100,18 @@ BeexyBox marker_device
         log_file_number = 0;
         max_number = int(exp(2,mask_bit_size))-1;
         init_time = now();
+    }
 
-        // start the log file
-        setup_log();
+    /*
+     * To avoid collisions with other logging devices allow the
+     * to set the log_file_number manually.
+     *
+     * Could be done directly on marker_device, but via function is
+     * prettier. 
+     */
+    void set_log_file_number(int number)
+    {
+        log_file_number = number;
     }
 
     // Opens up the connection to the BeexyBox device
@@ -111,11 +125,20 @@ BeexyBox marker_device
         if(!this.is_open)
         {
             if(device_address == "")
-                print_error("!! ERROR - Marker module was unable to open BeexyBox device !!\n");
+                print_error("!! ERROR - "
+                        "Marker module was unable to open BeexyBox device !!\n"
+                        );
             else
-                print_error("!! ERROR - Marker module was unable to open BeexyBox device at "+DEVICE_ADDRESS+" !!\n");
+                print_error("!! ERROR - "
+                        "Marker module was unable to open BeexyBox device at "
+                        + DEVICE_ADDRESS
+                        + " !!\n"
+                        );
             return false;
         }
+        
+        // Start the log file.
+        setup_log();
 
         return true;
     }
@@ -132,9 +155,9 @@ BeexyBox marker_device
     void transfer_marker(Marker mark)
     {
         int output_line = 0;
-        while( output_line < this.mask_bit_size)
+        while(output_line < this.mask_bit_size)
         {
-            if( mark.number & (1 << output_line))
+            if(mark.number & (1 << output_line))
                 this.start_output(output_line, mark.onset, mark.pulse_length);
             output_line++;
         }
@@ -159,7 +182,14 @@ BeexyBox marker_device
             return false;
         }
 
-        open_log(log_file_number, LOG_FILE_DIRECTORY + "/" + format_wt(now(), TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM) + "-" + log_file_number + ".log");
+        open_log(log_file_number,
+                    LOG_FILE_DIRECTORY + "/" +
+                    format_wt(
+                        now(),
+                        TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
+                        ) +
+                    "-" + log_file_number + ".log"
+                    );
         log(log_file_number, "## Zero time: " + format_wt(init_time) + "\r\n");
         log(log_file_number, header);
 
@@ -202,8 +232,8 @@ Timer scheduler {
 
     on_event:init()
     {
-        scheduled_markers.size    = 0;
-        scheduled_markers.capacity = 5;
+        scheduled_markers.size      = 0;
+        scheduled_markers.capacity  = 5;
     }
 
     on_event:expire()
@@ -214,8 +244,15 @@ Timer scheduler {
         dur timing_off_set = now() - expire_time;
         if(timing_off_set > SCHEDULER_PRE_EMPT_ERROR_TOLERANCE)
         {
-            print_error("!! ERROR Overloading - Marker " + next_in_line.number +" failed to be pre-empted on time (" + string(timing_off_set) + " too late) !!\n");
-            print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
+            print_error("!! ERROR Overloading - Marker " + next_in_line.number
+                        +" failed to be pre-empted on time ("
+                        + string(timing_off_set) +
+                        " too late) !!\n"
+                        );
+            print_error("!! ERROR - Marker "
+                        + next_in_line.number
+                        + " dropped !!\n"
+                        );
             marker_device.log_marker(next_in_line, false, "scheduling");
         }
         else
@@ -227,7 +264,6 @@ Timer scheduler {
         reschedule();
     }
 
-
     // Starts to (re)schedule the pre-empt loading of markers
     void reschedule()
     {
@@ -235,17 +271,30 @@ Timer scheduler {
         if(scheduled_markers.size == 0) return;
 
         Marker next_in_line = scheduled_markers[scheduled_markers.size-1];
-        time next_in_line_scheduler_onset = next_in_line.onset - SCHEDULER_PRE_EMPT;
+        time next_in_line_scheduler_onset =
+                next_in_line.onset - SCHEDULER_PRE_EMPT;
 
         // We do not abort or change if the next in line marker timing hasn't changed.
-        if(next_in_line_scheduler_onset == scheduler.expected_expire_time && scheduler.is_running) return;
+        if(next_in_line_scheduler_onset == scheduler.expected_expire_time &&
+            scheduler.is_running
+            )
+            return;
 
         time current_time = now();
-        if(next_in_line_scheduler_onset <= current_time) // we are too late! Oh noes!
+        // we are too late! Oh noes!
+        if(next_in_line_scheduler_onset <= current_time) 
         {
-            print_error("!! ERROR Overloading - Marker " + next_in_line.number +" failed to be scheduled to pre-empt on time (" + string(current_time-next_in_line_scheduler_onset) + " too late) !!\n");
+            print_error("!! ERROR Overloading - Marker "
+                    + next_in_line.number 
+                    + " failed to be scheduled to pre-empt on time ("
+                    + string(current_time-next_in_line_scheduler_onset)
+                    + " too late) !!\n"
+                    );
             pop(); // drop the next marker
-            print_error("!! ERROR - Marker " + next_in_line.number + " dropped !!\n");
+            print_error("!! ERROR - Marker "
+                    + next_in_line.number
+                    + " dropped !!\n"
+                    );
             reschedule(); // restart (re)scheduling the next marker in line
             marker_device.log_marker(next_in_line, false, "scheduling");
         }
@@ -265,12 +314,7 @@ Timer scheduler {
             return false;
         }
 
-        // add marker to the stack
-        scheduled_markers.size = scheduled_markers.size+1;
-        scheduled_markers[scheduled_markers.size-1] = mark;
-
-        // order the stack nicely
-        reorder_stack();
+        insert_marker(mark);
 
         // make sure the scheduler is doing it's job
         reschedule();
@@ -301,14 +345,22 @@ Timer scheduler {
         // check number range
         if(mark.number < 1 || mark.number > marker_device.max_number )
         {
-            print_error("!! WARNING - Marker " + string(mark.number) + " is outside of range (1-255) !!\n");
+            print_error("!! WARNING - Marker "
+                    + string(mark.number)
+                    + " is outside of range (1-255) !!\n"
+                    );
             return false;
         }
 
         // check pulse length
         if(mark.pulse_length <= 0ms )
         {
-            print_error("!! WARNING - Marker " + string(mark.number) + "'s pulse length is set to 0 or below (" + string(mark.pulse_length) + "), this doesn't make any sense !!\n");
+            print_error("!! WARNING - Marker "
+                    + string(mark.number)
+                    + "'s pulse length is set to 0 or below ("
+                    + string(mark.pulse_length)
+                    + "), this doesn't make any sense !!\n"
+                    );
             return false;
         }
         return true;
@@ -322,10 +374,17 @@ Timer scheduler {
         time candidate_offset = candidate_mark.onset + candidate_mark.pulse_length;
 
         // Check against the transered marker (the one currently loaded into the device)
-        time transferred_offset = transferred_marker.onset + transferred_marker.pulse_length;
+        time transferred_offset =
+                transferred_marker.onset + transferred_marker.pulse_length;
+
         if( transferred_offset >= candidate_scheduler_onset )
         {
-            print_error("!! WARNING - Marker " + string(candidate_mark.number) + "'s onset conflicts with a marker (" + transferred_marker.number + ") that has already been pre-empteed to the device !!\n");
+            print_error("!! WARNING - Marker "
+                    + string(candidate_mark.number)
+                    + "'s onset conflicts with a marker ("
+                    + transferred_marker.number
+                    + ") that has already been pre-empteed to the device !!\n"
+                    );
             return false;
         }
 
@@ -333,12 +392,26 @@ Timer scheduler {
         while(index < scheduled_markers.size)
         {
 
-            time scheduled_scheduler_onset = scheduled_markers[index].onset - SCHEDULER_PRE_EMPT;
-            time scheduled_offset = scheduled_markers[index].onset  + scheduled_markers[index].pulse_length;
+            time scheduled_scheduler_onset =
+                    scheduled_markers[index].onset - SCHEDULER_PRE_EMPT;
+            time scheduled_offset =
+                    scheduled_markers[index].onset +
+                    scheduled_markers[index].pulse_length;
 
-            if(overlap(scheduled_scheduler_onset, scheduled_offset, candidate_scheduler_onset, candidate_offset))
+            if(overlap(scheduled_scheduler_onset,
+                        scheduled_offset,
+                        candidate_scheduler_onset,
+                        candidate_offset
+                        )
+                )
             {
-                print_error("!! WARNING - Marker " + string(candidate_mark.number) + "'s onset conflicts with a marker (" + scheduled_markers[index].number + ") that has already been scheduled !!\n");
+                print_error("!! WARNING - Marker "
+                        + string(candidate_mark.number)
+                        + "'s onset conflicts with a marker ("
+                        + scheduled_markers[index].number
+                        + ") that has already been scheduled !!\n"
+                        );
+
                 return false;
             }
 
@@ -348,28 +421,33 @@ Timer scheduler {
         return true;
     }
 
-    // Order the stack quickly by assuming for an array of n length:
-    // - The nth item is not in order
-    // - The 1 to n-1th items are in order
-    void reorder_stack()
+    // insert a marker to the scheduled_markers
+    void insert_marker(Marker mark)
     {
-        int index = scheduled_markers.size-1;
+        // add marker to the top of the stack
+        scheduled_markers.size = scheduled_markers.size+1;
+        scheduled_markers[scheduled_markers.size-1] = mark;
+
+        // Move the inserted item into position.
+        int index = scheduled_markers.size - 1;
         Marker current_mark;
         Marker lower_mark;
         while(index >= 1)
         {
             current_mark = scheduled_markers[index];
-            lower_mark = scheduled_markers[index-1];
+            lower_mark = scheduled_markers[index - 1];
             if(current_mark.onset > lower_mark.onset) // first come first serve
-                scheduled_markers.swap(index, index-1);
+                scheduled_markers.swap(index, index - 1);
             else
-                return; //we can stop because we operate at the assumption the stack is already in order
+                // We can stop because we operate at the assumption
+                // the stack is already in order
+                return;
             index--;
         }
     }
 
-    // Returns true if the pulses set by that onset and offset and this onset and offset
-    // overlap
+    // Returns true if the pulses set by that onset and offset and this onset
+    // and offset overlap.
     bool overlap(time that_onset, time that_offset, time this_onset, time this_offset)
     {
         return that_offset >= this_onset && this_offset >= that_onset;
@@ -379,13 +457,22 @@ Timer scheduler {
     void dump_schedule()
     {
         println("---");
-        println("Overview of scheduled markers at " + format_wt(now(), TIME_FORMAT_TIME_HHMMSS_MICROS) + ":");
+        println("Overview of scheduled markers at "
+                + format_wt(now(),
+                TIME_FORMAT_TIME_HHMMSS_MICROS) +
+                ":"
+                );
         println("index\tmarker\tonset(hh:mm:ss...)\tpulse_length");
         int index = scheduled_markers.size-1;
         while(index >= 0)
         {
             Marker m = scheduled_markers[index];
-            println(string(index) + ": \t" + string(m.number) + "\t" + format_wt(m.onset, TIME_FORMAT_TIME_HHMMSS_MICROS) + "\t\t" + m.pulse_length);
+            println(
+                    string(index)
+                    + ": \t" + string(m.number)
+                    + "\t" + format_wt(m.onset, TIME_FORMAT_TIME_HHMMSS_MICROS)
+                    + "\t\t" + m.pulse_length
+                    );
             index--;
         }
         println("...");
