@@ -1,0 +1,130 @@
+#!/usr/bin/zep-1.14
+
+// The next plugin is required for zep 2.x
+//plugin zep_iobeexybox;
+
+// The next plugin is required for zep 1.x
+plugin zep_digio;
+
+/*
+    This script is setup to use a BeexyBox X to send
+    triggers (markers) to the BioSemi EEG equipment.
+
+    It sends it every X ms. This shows latency variability.
+    For ERP this should approximate 0. Below 0.1ms at 99% of the time
+    is still okay.
+
+    To measure this latency variability the receiving equipment can
+    record the signal and determine the actual interval between each
+    marker. Or trigger. The average difference between the measured interval
+    and configured inteval is the latency variablity.
+
+    Note that you minimally REQUIRE 1.14.4 or 2.0.7!
+
+    Chris van Run, 2017-05
+*/
+
+// Some settings for the latency test:
+
+// BeexyBox might need to warm up to correctly determine clock drift
+const dur beexy_box_warmup_duration = 5s;
+
+// The markers interval
+const dur marker_interval           = 500ms;
+
+// We need to provide some timing to allow the script to configure,
+// setup and communicate with the BeexyBox.
+const dur marker_bootstrap_duration = 100ms;
+
+// Total number of markers to send before terminating
+const int number_of_markers      = 1000;
+
+// Which trigger/markers to send
+const int marker_value              = 1;
+
+// Duration of markers. BioSemi has a minimal setting
+const dur marker_duration           = 50ms;
+
+start()
+{
+    if (!set_up_sender()) terminate;
+    println("Giving the BeexyBox " + int(beexy_box_warmup_duration / 1000) + " seconds to correct for clock drift.");
+    beexy_box_warmup.start(now()+beexy_box_warmup_duration);
+}
+
+void start_latency_test()
+{
+    println("Starting latency test.");
+    println("Expecting to finish in " + int(number_of_markers*marker_interval) / 1000 + "s.");
+    println("Testing...");
+    beat.start(now());
+}
+
+bool set_up_sender()
+{
+    //setup the sender
+    string sender_hardware_address;
+    if (have_option("device"))
+        sender_hardware_address = option_value("device");
+    else
+        sender_hardware_address = "/dev/ttyACM0";
+    println("Opening sending device at " + sender_hardware_address);
+    sender.open(sender_hardware_address);
+    if(!sender.is_open){
+        print_error("Error: Could not open sending device at" + sender_hardware_address);
+        return false;
+    }
+    println("Done...");
+
+    return true;
+}
+
+BeexyBox sender
+{
+    on_event:cleanup()
+    {
+        close();
+    }
+}
+
+Timer beexy_box_warmup
+{
+    on_event:expire()
+    {
+        println("Done...");
+        start_latency_test();
+    }
+}
+
+Timer beat
+{
+    int counter;
+
+    init() {
+        counter = 0;
+    }
+
+    on_event:expire()
+    {
+        if( counter > number_of_markers)
+        {
+            println("Done!");
+            terminate;
+        }
+
+        // The beat goes off slightly before the marker timing to boostrap
+        // the next marker
+        time next_marker_time = event_time + marker_bootstrap_duration;
+        set_marker(next_marker_time);
+
+        counter++;
+
+        // The next beat should be marker_interval away.
+        this.start(event_time + marker_interval);
+    }
+}
+
+void set_marker(time tref)
+{
+    sender.start_output(0, tref, marker_duration);
+}
