@@ -17,12 +17,12 @@ the top of your `.zp` file.
 stimulus add the following function call:
 
     `setup_marker_at(<int marker> ,<time tref>);`
-    
+
     With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been set up.
 4.  Alternatively, you might want to send a marker as quickly as possible. Use the following function call for that:
 
     `send_marker(<int marker>);`
-    
+
     This will set up a marker to be sent as quickly as possible. Because of internal logistics there is a short delay before the marker will be actually send. This delay is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings the delay is around 7.5ms.
 
 ## Logs
@@ -37,7 +37,9 @@ Below are some common problems and their solutions. If these do not work please 
 Sometimes the BeexyBox X device is not automagically found.
 If this is the case you might need to define the device address manually.
 Do this by setting the `DEVICE_ADDRESS` at the top of the `eeg_marker.zm` file.
-This variable is empty (`""`) by default which results in an automatic lookup.
+If this variable is empty (`""`) it will results in an automatic lookup attempt.
+Unfortunately, this lookup does not work (Zep 1.14.4) and you are required to input
+the address manually.
 
 For Linux-based operating systems the address is generally one of:
 *   _/dev/ttyACM0_
