@@ -12,14 +12,15 @@ of the BioSemi EEG equipment. This allows you to send markers with Zep!
 
 When comparing this module with sending markers from Presentation we found that
 this module is slightly MORE reliable than the Presentation (c) software. Zep
-sends markers with LESS variation in timing.
+sends markers with LESS variation in timing. Please see the comparison_test folder
+in the repository for details about the test.
 
 ATTENTION:
 For USAGE instruction or more information read the README.md or visit the github
 link above.
 
 HISTORY:
-2016-06-08 CvR Created and tested with BioSemi equipment.
+2017-06-12 CvR Adjusted and tested with BioSemi equipment.
 
 \******************************************************************************/
 
@@ -34,6 +35,13 @@ plugin zep_file;
 // default: "/dev/ttyACM0"
 const string DEVICE_ADDRESS = "/dev/ttyACM0";
 // const string DEVICE_ADDRESS = "COM1";
+
+// The number of input / trigger lines at the receiving end define the minimum
+// and maximum integer the device can send.
+// For the BioSemi equipment this number of lines are 8.
+// Hence we it only makes sense to output on 8 out of the 10 output lines that
+// are available on the BeexyBox X.
+const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
 
 // Length that the marker needs to be active in order to be registered
 // default: 20ms
@@ -95,10 +103,10 @@ BeexyBox marker_device
         if(!start_device()) terminate;
 
         // init some variables
-        mask_bit_size = 8; // we only have 8 outputs to work with
+        mask_bit_size   = NUMBER_OF_OUTPUT_LINES_DEVICE;
         log_file_number = 0;
-        max_number = int(exp(2,mask_bit_size))-1;
-        init_time = now();
+        max_number      = int(exp(2,mask_bit_size))-1;
+        init_time       = now();
     }
 
     /*
@@ -106,7 +114,7 @@ BeexyBox marker_device
      * to set the log_file_number manually.
      *
      * Could be done directly on marker_device, but via function is
-     * prettier. 
+     * prettier.
      */
     void set_log_file_number(int number)
     {
@@ -135,7 +143,7 @@ BeexyBox marker_device
                         );
             return false;
         }
-        
+
         // Start the log file.
         setup_log();
 
@@ -186,7 +194,7 @@ BeexyBox marker_device
                     format_wt(
                         now(),
                         TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
-                        ) +
+                    ) +
                     "-" + log_file_number + ".log"
                     );
         log(log_file_number, "## Zero time: " + format_wt(init_time) + "\r\n");
@@ -196,7 +204,7 @@ BeexyBox marker_device
     }
 
     // Logs the marker with a status call
-    void log_marker(Marker mark, bool succes, string status)
+    void log_marker(Marker mark, bool success, string status)
     {
         dur target_time = mark.onset - init_time;
 
@@ -206,7 +214,7 @@ BeexyBox marker_device
             format_wt(now()) + delimiter
             + string(real(target_time)) + delimiter
             + mark.number + delimiter
-            + string(succes) + delimiter
+            + string(success) + delimiter
             +  status + "\r\n";
 
         log(this.log_file_number, line);
@@ -281,10 +289,10 @@ Timer scheduler {
 
         time current_time = now();
         // we are too late! Oh noes!
-        if(next_in_line_scheduler_onset <= current_time) 
+        if(next_in_line_scheduler_onset <= current_time)
         {
             print_error("!! ERROR Overloading - Marker "
-                    + next_in_line.number 
+                    + next_in_line.number
                     + " failed to be scheduled to pre-empt on time ("
                     + string(current_time-next_in_line_scheduler_onset)
                     + " too late) !!\n"
