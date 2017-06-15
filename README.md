@@ -26,7 +26,7 @@ stimulus add the following function call:
     This will set up a marker to be sent as quickly as possible. Because of internal logistics there is a short delay before the marker will be actually send. This delay is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings the delay is around 7.5ms.
 
 ## Development mode
-When you don't have a BeexyBox X available you can still incorporate this module by setting the `DEVELOP_MODE` to true.
+When you don't have a BeexyBox X available you can still test and integrate this module by setting `DEVELOP_MODE` to true.
 
 `const bool DEVELOP_MODE = true;`
 
