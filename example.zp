@@ -4,7 +4,7 @@ requires 2.0.9;
 
 plugin zep_iobeexybox;
 
-import eeg_markers;
+import zep_markers;
 
 
 start() {

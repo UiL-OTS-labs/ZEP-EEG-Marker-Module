@@ -1,4 +1,4 @@
-# ZEP-EEG-Marker-Module
+# ZEP-Markers-Module
 
 This [Zep](https://www.beexy.nl/zep/wiki/doku.php) module provides a way to send markers (i.e. triggers) from your Zep experiment to a parallel input port.
 One such input port is the USB receiver of the [BioSemi EEG equipment](https://www.biosemi.com/). This allows you to send markers with Zep! Yeah!
@@ -10,8 +10,8 @@ The modules uses an external [BeexyBox](https://www.beexy.nl/responseboxes/) whi
 *   [BeexyBox type X](https://www.beexy.nl/responseboxes/)
 
 ## How to use this module
-1.  Copy the file `eeg_markers.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
-2.  Within your experiment import the module by adding `import eeg_markers;` to
+1.  Copy the file `zep_markers.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
+2.  Within your experiment import the module by adding `import zep_markers;` to
 the top of your `.zp` file.
 3.  Within your experiment script, after setting up the presentation of a
 stimulus add the following function call:
