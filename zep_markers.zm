@@ -62,9 +62,6 @@ const dur PULSE_LENGTH = 10ms;
 const dur SCHEDULER_PRE_EMPT = 5ms;
 const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
 
-// Markers are logged in the following directory
-const string LOG_FILE_DIRECTORY = "marker-logs";
-
 // Sends the marker at a specified time with an optional pulse length.
 // Returns true at successful setup
 bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
@@ -214,35 +211,22 @@ BeexyBox marker_device
         this.log_marker(mark, true, "transferred");
     }
 
-    bool setup_log()
+    // Start log and log header info.
+    void setup_log()
     {
         string header = "date;target_timing(ms);marker;status\r\n";
-        //Ensure existence
-        if(!file_exists(LOG_FILE_DIRECTORY))
-            create_dir(LOG_FILE_DIRECTORY);
 
-        //Check access
-        if(
-            file_type(LOG_FILE_DIRECTORY) != FILE_TYPE_DIRECTORY ||
-            !file_writable(LOG_FILE_DIRECTORY)
-        )
-        {
-            print_error("!! Warning - Could not open log directory !!");
-            return false;
-        }
+        string log_file_name =
+            format_wt(
+                now(),
+                TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
+            ) +
+            "-" + log_file_number + ".log";
 
-        open_log(log_file_number,
-                    LOG_FILE_DIRECTORY + "/" +
-                    format_wt(
-                        now(),
-                        TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
-                    ) +
-                    "-" + log_file_number + ".log"
-                    );
+
+        open_log(this.log_file_number, log_file_name);
         log(log_file_number, "## Zero time: " + format_wt(init_time) + "\r\n");
         log(log_file_number, header);
-
-        return true;
     }
 
     // Logs the marker with a status call

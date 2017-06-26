@@ -33,7 +33,7 @@ When you don't have a BeexyBox X available you can still test and integrate this
 This makes the module work without a BeexyBox but simulates sending output.
 
 ## Logs
-The module logs the status of failed and successfully transferred markers in a date-formatted file in a `markers-log` directory.
+The module logs the status of failed and successfully transferred markers in a date-formatted file in the `./logs` directory.
 
 ## Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
