@@ -1,7 +1,7 @@
 /******************************************************************************\
-FILE:           eeg_markers.zm
+FILE:           zep_markers.zm
 AUTHOR:         Chris van Run <C.P.A.vanrun@uu.nl>
-GITHUB:         https://github.com/UiL-OTS-labs/ZEP-EEG-Marker-Module
+GITHUB:         https://github.com/UiL-OTS-labs/ZEP-Markers-Module
 ADAPTED BY:     -
 
 DESCRIPTION:
@@ -22,19 +22,28 @@ link above.
 HISTORY:
 2017-06-12 CvR Adjusted and tested with BioSemi equipment.
 2017-06-15 CvR Added develop mode.
+2017-06-26 CvR Rewrite and refactor for zep 2.0
 
 \******************************************************************************/
 
-plugin zep_digio;
-plugin zep_misc;
+plugin zep_iobeexybox;
 plugin zep_math;
 plugin zep_file;
 
+// Set this mode if you need to develop or debug without having a BeexyBox
+// The module will use an internal dummy transfer and make prints instead
+// of outputting triggers.
+//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
+const bool DEVELOP_MODE = false;
+
 // If set to "" the module will let the BeexyBox object decide the Beexybox.
-// If it can't find it, try replacing the address with /dev/ttyACM1
-// default: "/dev/ttyACM0"
-const string DEVICE_ADDRESS = "/dev/ttyACM0";
-// const string DEVICE_ADDRESS = "COM1";
+// If multiple are connected this might result in the wrong Beexybox being open
+// To counteract you can set the serial of the device here:
+const string DEVICE_SERIAL = "";
+
+// This is the target device type that is expected to be found.
+// most of the times this should be set to specify the X type.
+const BeexyBoxType TARGET_DEVICE_TYPE = BXY_DEVICE_TYPE_X;
 
 // The number of input / trigger lines at the receiving end define the minimum
 // and maximum integer the device can send.
@@ -44,23 +53,14 @@ const string DEVICE_ADDRESS = "/dev/ttyACM0";
 const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
 
 // Length that the marker needs to be active in order to be registered
-// default: 20ms
-const dur PULSE_LENGTH = 20ms;
+// default: 10ms
+const dur PULSE_LENGTH = 10ms;
 
 // The markers are buffered before they are sent to the marker device.
 // The marker is transferred from the buffer to the device SCHEDULER_PRE_EMPT ms
 // before the marker' onset.
 const dur SCHEDULER_PRE_EMPT = 5ms;
 const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
-
-// Markers are logged in the following directory
-const string LOG_FILE_DIRECTORY = "marker-logs";
-
-// Set this mode if you need to develop or debug without having a BeexyBox
-// The module will use an internal dummy transfer and make prints instead
-// of outputting triggers.
-//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
-const bool DEVELOP_MODE = false; 
 
 // Sends the marker at a specified time with an optional pulse length.
 // Returns true at successful setup
@@ -105,6 +105,12 @@ BeexyBox marker_device
 
     on_event:init()
     {
+        setup();
+        if(error()) terminate;
+    }
+
+    void setup()
+    {
         // warn if in development mode
         if(DEVELOP_MODE)
             print_error("!! WARNING - "
@@ -113,16 +119,17 @@ BeexyBox marker_device
                     );
 
         // lets start up the party
-        if(!start_device()) terminate;
-
-        // Start the log file.
-        setup_log();
+        start_device();
+        if(error()) return;
 
         // init some variables
         mask_bit_size   = NUMBER_OF_OUTPUT_LINES_DEVICE;
-        log_file_number = 0;
+        this.set_log_file_number(0);
         max_number      = int(exp(2,mask_bit_size))-1;
         init_time       = now();
+
+        // Start the log file.
+        setup_log();
     }
 
     /*
@@ -138,43 +145,42 @@ BeexyBox marker_device
     }
 
     // Opens up the connection to the BeexyBox device
-    bool start_device(string device_address = DEVICE_ADDRESS)
+    void start_device(string device_serial = DEVICE_SERIAL, BeexyBoxType device_type = TARGET_DEVICE_TYPE)
     {
         // Develop mode works without using an actual BeexyBox
-        if(DEVELOP_MODE) return true;
+        if(DEVELOP_MODE) return;
 
-        if(device_address != "")
-            this.open(device_address);
+        if(device_serial != "")
+            this.open(device_type, device_serial);
         else
-            this.open();
+            this.open(device_type);
 
         if(!this.is_open)
         {
-            if(device_address == "")
+            if(device_serial == "")
                 print_error("!! ERROR - "
-                        "Marker module was unable to open BeexyBox device !!\n"
+                        + "Marker module was unable to open" + cast<BeexyBoxType>(device_type) + " device !!\n"
                         );
             else
                 print_error("!! ERROR - "
-                        "Marker module was unable to open BeexyBox device at "
-                        + DEVICE_ADDRESS
+                        + "Marker module was unable to open " + cast<BeexyBoxType>(device_type) + " "
+                        + device_serial
                         + " !!\n"
                         );
-            return false;
         }
-
-        return true;
     }
 
-    // Transfers the marker
-    //
-    // Uses a bit wise operation:
-    // For example for marker 3 (int) or 000000011 (byte)
-    // it left shifts 1 (int) output_line times and does an AND operation
-    // over both this shifted and the marker byte. For output_line 1:
-    // 000000011 (marker byte)
-    // 000000010 (left-shifted line)
-    // 000000010 <= NOT 0 so true; we need to set this output line.
+    /*
+    * Tranfers the marker to the device
+    *
+    * Uses a bit wise operation:
+    * For example for marker 3 (int) or 000000011 (byte)
+    * it left shifts 1 (int) output_line times and does an AND operation
+    * over both this shifted and the marker byte. For output_line 1:
+    * 000000011 (marker byte)
+    * 000000010 (left-shifted line)
+    * 000000010 <= NOT 0 so true; we need to set this output line.
+     */
     void transfer_marker(Marker mark)
     {
         int output_line = 0;
@@ -205,35 +211,22 @@ BeexyBox marker_device
         this.log_marker(mark, true, "transferred");
     }
 
-    bool setup_log()
+    // Start log and log header info.
+    void setup_log()
     {
         string header = "date;target_timing(ms);marker;status\r\n";
-        //Ensure existence
-        if(!file_exists(LOG_FILE_DIRECTORY))
-            create_dir(LOG_FILE_DIRECTORY);
 
-        //Check access
-        if(
-            file_type(LOG_FILE_DIRECTORY) != FILE_TYPE_DIRECTORY ||
-            !file_writable(LOG_FILE_DIRECTORY)
-        )
-        {
-            print_error("!! Warning - Could not open log directory !!");
-            return false;
-        }
+        string log_file_name =
+            format_wt(
+                now(),
+                TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
+            ) +
+            "-" + log_file_number + ".log";
 
-        open_log(log_file_number,
-                    LOG_FILE_DIRECTORY + "/" +
-                    format_wt(
-                        now(),
-                        TIME_FORMAT_DATE_YYYYMMDD + TIME_FORMAT_TIME_HHMM
-                    ) +
-                    "-" + log_file_number + ".log"
-                    );
+
+        open_log(this.log_file_number, log_file_name);
         log(log_file_number, "## Zero time: " + format_wt(init_time) + "\r\n");
         log(log_file_number, header);
-
-        return true;
     }
 
     // Logs the marker with a status call
@@ -315,7 +308,7 @@ Timer scheduler {
                 next_in_line.onset - SCHEDULER_PRE_EMPT;
 
         // We do not abort or change if the next in line marker timing hasn't changed.
-        if(next_in_line_scheduler_onset == scheduler.expected_expire_time &&
+        if(next_in_line_scheduler_onset == scheduler.expire_time &&
             scheduler.is_running
             )
             return;
@@ -406,8 +399,10 @@ Timer scheduler {
         return true;
     }
 
-    // Checks the timing to see if there are no conflicts with buffered or scheduled markers
-    // It does so more efficiently by assuming the stack buffer is ordered
+    /*
+    * Checks the timing to see if there are no conflicts with buffered or scheduled markers
+    * It does so more efficiently by assuming the stack buffer is ordered
+    */
     bool valid_timing(Marker candidate_mark)
     {
         time candidate_scheduler_onset = candidate_mark.onset - SCHEDULER_PRE_EMPT;
@@ -486,8 +481,11 @@ Timer scheduler {
         }
     }
 
-    // Returns true if the pulses set by that onset and offset and this onset
-    // and offset overlap.
+    /*
+    * Utility function
+    * Returns true if the pulses set by that onset and offset and this onset
+    * and offset overlap.
+    */
     bool overlap(time that_onset, time that_offset, time this_onset, time this_offset)
     {
         return that_offset >= this_onset && this_offset >= that_onset;

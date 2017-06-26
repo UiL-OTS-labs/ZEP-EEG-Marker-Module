@@ -1,4 +1,4 @@
-# ZEP-EEG-Marker-Module
+# ZEP-Markers-Module
 
 This [Zep](https://www.beexy.nl/zep/wiki/doku.php) module provides a way to send markers (i.e. triggers) from your Zep experiment to a parallel input port.
 One such input port is the USB receiver of the [BioSemi EEG equipment](https://www.biosemi.com/). This allows you to send markers with Zep! Yeah!
@@ -6,12 +6,12 @@ One such input port is the USB receiver of the [BioSemi EEG equipment](https://w
 The modules uses an external [BeexyBox](https://www.beexy.nl/responseboxes/) which sends the actual markers. Markers (including their timings) are transferred to the BeexyBox sometimes before their required onset. The device can hold one marker at a time. Hence, if you set up markers in sequence the scheduler will plan to transfer them to the device milliseconds before their onset. The scheduler limits the frequency you can send markers at. This limit is ~40 Hz (or at 25ms intervals).
 
 ## Requirements for this module
-*   [Zep version 1.14.4 or later](https://www.beexy.nl/zep/wiki/doku.php?id=download)
+*   [Zep version 2.0.9 or later](https://www.beexy.nl/zep/wiki/doku.php?id=download) or [eval version](https://beexy.nl/eval)
 *   [BeexyBox type X](https://www.beexy.nl/responseboxes/)
 
 ## How to use this module
-1.  Copy the file `eeg_markers.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
-2.  Within your experiment import the module by adding `import eeg_markers;` to
+1.  Copy the file `zep_markers.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
+2.  Within your experiment import the module by adding `import zep_markers;` to
 the top of your `.zp` file.
 3.  Within your experiment script, after setting up the presentation of a
 stimulus add the following function call:
@@ -33,30 +33,22 @@ When you don't have a BeexyBox X available you can still test and integrate this
 This makes the module work without a BeexyBox but simulates sending output.
 
 ## Logs
-The module logs the status of failed and successfully transferred markers in a date-formatted file in a `markers-log` directory.
+The module logs the status of failed and successfully transferred markers in a date-formatted file in the `./logs` directory.
 
 ## Troubleshooting
 Below are some common problems and their solutions. If these do not work please ask your technician for help. Make sure you run the experiment in such a way you can see the error output of Zep. This module outputs _WARNINGS_ and _ERRORS_ that might explain trouble.
 
-### Module cannot find the device
+### Module cannot find the device or connects to wrong device
 
-#### Check the `DEVICE_ADDRESS`
-Sometimes the BeexyBox X device is not automagically found.
-If this is the case you might need to define the device address manually.
-Do this by setting the `DEVICE_ADDRESS` at the top of the `eeg_marker.zm` file.
+#### Check the `DEVICE_SERIAL`
+Sometimes the BeexyBox X device is not automagically found or opens the wrong device.
+If this is the case you might need to define the device serial.
+Do this by setting the `DEVICE_SERIAL` at the top of the `eeg_marker.zm` file.
 If this variable is empty (`""`) it will results in an automatic lookup attempt.
-Unfortunately, this lookup does not work (Zep 1.14.4) and you are required to input
-the address manually.
 
-For Linux-based operating systems the address is generally one of:
-*   _/dev/ttyACM0_
-*   _/dev/ttyACM1_
-*   ...
-
-For Windows-based operating systems the address is generally one of:
-*   _COM1_
-*   _COM2_
-*   ...
+The serial is printed on the bottom of the physical box of the device.
+Alternatively, disconnecting all but one BeexyBox and run the [bxymonitor](https://www.beexy.nl/download/beexybox/).
+Once connected this utility should print basic descriptors of the device which include the serial.
 
 #### Check the device connections
 [<img src="readme_images/BeexyBoxX.jpg" width="30%"></img>](readme_images/BeexyBoxX.jpg)
@@ -68,7 +60,7 @@ The BeexyBox X (`A`) requires three connections:
 first 10 pin of the parallel port. Here we use a ribbon cable and a 37-pin sub-d connector.
 
 #### Check the connections using the bxymonitor application
-Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuring, monitoring and testing BeexyBox devices) to see if you can actually connect to the BeexyBox (_e.g._ `bxymonitor /dev/ttyACM0`).
+Use [bxymonitor](https://www.beexy.nl/download/beexybox/) (utility for configuring, monitoring and testing BeexyBox devices) to see if you can actually connect to the BeexyBox (_e.g._ `bxymonitor`).
 
 
 ### Warnings when sending more than one marker simultaneously

@@ -1,10 +1,17 @@
-#!/usr/bin/zep-1.14
+#!/usr/bin/zep-2.0
 
-requires 1.14.4;
+requires 2.0.9;
 
-import eeg_markers;
+plugin zep_iobeexybox;
+
+import zep_markers;
+
 
 start() {
+    // To test if the BeexyBox X and Beexybox B can work together uncomment
+    // the next line
+    //open_secondary_beexybox();
+
     println("#### Running some tests ####");
 
     time tref = now();
@@ -66,4 +73,68 @@ void overload_scheduler(time tref)
     time tock = now();
     println("Finished at " + tock + ". Adding these " + number_of_markers + " took " + string(tock-tic) + ".");
     println("During this time the scheduler was overloaded causing it to fail scheduling or pre-empting markers in a timely fashion.");
+}
+
+void open_secondary_beexybox()
+{
+    btnbox.open(BXY_DEVICE_TYPE_B);
+}
+
+// This is an example of a secondary btnbox:
+BeexyBox btnbox
+{
+    init()
+    {
+//        open("/dev/ttyACM0");
+//        open("COM4");
+
+//        open(BXY_DEVICE_TYPE_UNKNOWN);
+//        open(BXY_DEVICE_TYPE_B);
+//        open(BXY_DEVICE_TYPE_X);
+
+//        open(BXY_DEVICE_TYPE_UNKNOWN, "B15001");
+//        open(BXY_DEVICE_TYPE_B, "B15001");
+//        open(BXY_DEVICE_TYPE_X, "B15001");
+    }
+
+
+    cleanup()
+    {
+        close();
+    }
+
+
+    on_event:expire()
+    {
+        println("expired\t\t"
+            "timer: " + timer_number +
+            "\ttime: " + format_wt(event_time));
+    }
+
+
+    on_event:press()
+    {
+        println("pressed\t\t"
+            "button: " + input_button +
+            "\tstate: 0x" + format_hex(input_state) +
+            "\ttime: " + format_wt(event_time));
+    }
+
+
+    on_event:release()
+    {
+        println("released\t"
+            "button: " + input_button +
+            "\tstate: 0x" + format_hex(input_state) +
+            "\ttime: " + format_wt(event_time));
+    }
+
+
+    on_event:voicekey()
+    {
+        println("voicekey\t"
+            "action: " + voicekey_action +
+            "\ttime: " + format_wt(event_time) +
+            "\tdelay: " + (event_time - voicekey_detect_time));
+    }
 }
