@@ -22,19 +22,28 @@ link above.
 HISTORY:
 2017-06-12 CvR Adjusted and tested with BioSemi equipment.
 2017-06-15 CvR Added develop mode.
+2017-06-26 CvR Rewrite and refactor for zep 2.0
 
 \******************************************************************************/
 
-plugin zep_digio;
-plugin zep_misc;
+plugin zep_iobeexybox;
 plugin zep_math;
 plugin zep_file;
 
+// Set this mode if you need to develop or debug without having a BeexyBox
+// The module will use an internal dummy transfer and make prints instead
+// of outputting triggers.
+//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
+const bool DEVELOP_MODE = false;
+
 // If set to "" the module will let the BeexyBox object decide the Beexybox.
-// If it can't find it, try replacing the address with /dev/ttyACM1
-// default: "/dev/ttyACM0"
-const string DEVICE_ADDRESS = "/dev/ttyACM0";
-// const string DEVICE_ADDRESS = "COM1";
+// If multiple are connected this might result in the wrong Beexybox being open
+// To counteract you can set the serial of the device here:
+const string DEVICE_SERIAL = "";
+
+// This is the target device type that is expected to be found.
+// most of the times this should be set to specify the X type.
+const BeexyBoxType TARGET_DEVICE_TYPE = BXY_DEVICE_TYPE_X;
 
 // The number of input / trigger lines at the receiving end define the minimum
 // and maximum integer the device can send.
@@ -44,8 +53,8 @@ const string DEVICE_ADDRESS = "/dev/ttyACM0";
 const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
 
 // Length that the marker needs to be active in order to be registered
-// default: 20ms
-const dur PULSE_LENGTH = 20ms;
+// default: 10ms
+const dur PULSE_LENGTH = 10ms;
 
 // The markers are buffered before they are sent to the marker device.
 // The marker is transferred from the buffer to the device SCHEDULER_PRE_EMPT ms
@@ -55,12 +64,6 @@ const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
 
 // Markers are logged in the following directory
 const string LOG_FILE_DIRECTORY = "marker-logs";
-
-// Set this mode if you need to develop or debug without having a BeexyBox
-// The module will use an internal dummy transfer and make prints instead
-// of outputting triggers.
-//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
-const bool DEVELOP_MODE = false; 
 
 // Sends the marker at a specified time with an optional pulse length.
 // Returns true at successful setup
@@ -105,6 +108,17 @@ BeexyBox marker_device
 
     on_event:init()
     {
+        setup();
+        if(error()) terminate;
+    }
+
+    void re_init()
+    {
+
+    }
+
+    void setup()
+    {
         // warn if in development mode
         if(DEVELOP_MODE)
             print_error("!! WARNING - "
@@ -113,7 +127,8 @@ BeexyBox marker_device
                     );
 
         // lets start up the party
-        if(!start_device()) terminate;
+        start_device();
+        if(error()) return;
 
         // Start the log file.
         setup_log();
@@ -138,32 +153,29 @@ BeexyBox marker_device
     }
 
     // Opens up the connection to the BeexyBox device
-    bool start_device(string device_address = DEVICE_ADDRESS)
+    void start_device(string device_serial = DEVICE_SERIAL, BeexyBoxType device_type = TARGET_DEVICE_TYPE)
     {
         // Develop mode works without using an actual BeexyBox
-        if(DEVELOP_MODE) return true;
+        if(DEVELOP_MODE) return;
 
-        if(device_address != "")
-            this.open(device_address);
+        if(device_serial != "")
+            this.open(device_type, device_serial);
         else
-            this.open();
+            this.open(device_type);
 
         if(!this.is_open)
         {
-            if(device_address == "")
+            if(device_serial == "")
                 print_error("!! ERROR - "
-                        "Marker module was unable to open BeexyBox device !!\n"
+                        + "Marker module was unable to open" + cast<BeexyBoxType>(device_type) + " device !!\n"
                         );
             else
                 print_error("!! ERROR - "
-                        "Marker module was unable to open BeexyBox device at "
-                        + DEVICE_ADDRESS
+                        + "Marker module was unable to open " + cast<BeexyBoxType>(device_type) + " "
+                        + device_serial
                         + " !!\n"
                         );
-            return false;
         }
-
-        return true;
     }
 
     // Transfers the marker
@@ -315,7 +327,7 @@ Timer scheduler {
                 next_in_line.onset - SCHEDULER_PRE_EMPT;
 
         // We do not abort or change if the next in line marker timing hasn't changed.
-        if(next_in_line_scheduler_onset == scheduler.expected_expire_time &&
+        if(next_in_line_scheduler_onset == scheduler.expire_time &&
             scheduler.is_running
             )
             return;
