@@ -173,15 +173,17 @@ BeexyBox marker_device
         }
     }
 
-    // Transfers the marker
-    //
-    // Uses a bit wise operation:
-    // For example for marker 3 (int) or 000000011 (byte)
-    // it left shifts 1 (int) output_line times and does an AND operation
-    // over both this shifted and the marker byte. For output_line 1:
-    // 000000011 (marker byte)
-    // 000000010 (left-shifted line)
-    // 000000010 <= NOT 0 so true; we need to set this output line.
+    /*
+    * Tranfers the marker to the device
+    *
+    * Uses a bit wise operation:
+    * For example for marker 3 (int) or 000000011 (byte)
+    * it left shifts 1 (int) output_line times and does an AND operation
+    * over both this shifted and the marker byte. For output_line 1:
+    * 000000011 (marker byte)
+    * 000000010 (left-shifted line)
+    * 000000010 <= NOT 0 so true; we need to set this output line.
+     */
     void transfer_marker(Marker mark)
     {
         int output_line = 0;
@@ -413,8 +415,10 @@ Timer scheduler {
         return true;
     }
 
-    // Checks the timing to see if there are no conflicts with buffered or scheduled markers
-    // It does so more efficiently by assuming the stack buffer is ordered
+    /*
+    * Checks the timing to see if there are no conflicts with buffered or scheduled markers
+    * It does so more efficiently by assuming the stack buffer is ordered
+    */
     bool valid_timing(Marker candidate_mark)
     {
         time candidate_scheduler_onset = candidate_mark.onset - SCHEDULER_PRE_EMPT;
@@ -493,8 +497,11 @@ Timer scheduler {
         }
     }
 
-    // Returns true if the pulses set by that onset and offset and this onset
-    // and offset overlap.
+    /*
+    * Utility function
+    * Returns true if the pulses set by that onset and offset and this onset
+    * and offset overlap.
+    */
     bool overlap(time that_onset, time that_offset, time this_onset, time this_offset)
     {
         return that_offset >= this_onset && this_offset >= that_onset;
