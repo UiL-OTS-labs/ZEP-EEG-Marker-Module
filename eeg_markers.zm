@@ -112,11 +112,6 @@ BeexyBox marker_device
         if(error()) terminate;
     }
 
-    void re_init()
-    {
-
-    }
-
     void setup()
     {
         // warn if in development mode
@@ -130,14 +125,14 @@ BeexyBox marker_device
         start_device();
         if(error()) return;
 
-        // Start the log file.
-        setup_log();
-
         // init some variables
         mask_bit_size   = NUMBER_OF_OUTPUT_LINES_DEVICE;
-        log_file_number = 0;
+        this.set_log_file_number(0);
         max_number      = int(exp(2,mask_bit_size))-1;
         init_time       = now();
+
+        // Start the log file.
+        setup_log();
     }
 
     /*
