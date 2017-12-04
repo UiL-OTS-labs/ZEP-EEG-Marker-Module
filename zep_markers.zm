@@ -30,35 +30,12 @@ plugin zep_iospp;
 plugin zep_math;
 plugin zep_file;
 
-// Set this mode if you need to develop or debug without having a BeexyBox
-// The module will use an internal dummy transfer and make prints instead
-// of outputting triggers.
-//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
-const bool DEVELOP_MODE = true;
-
-// This is the address of the parallel port you want to use the exact number you
-// want here is dependent on the specifics the specific setup. Under Linux OS
-// this refers to the /dev/parportX files where X is the PORT_NUMBER
-const int PORT_NUMBER = 0;
-
-// The number of input / trigger lines at the receiving end define the minimum
-// and maximum integer the device can send.
-// For the BioSemi equipment this number of lines are 8.
-const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
-
-// Length that the marker needs to be active in order to be registered
-// default: 5ms
-const dur PULSE_LENGTH = 5ms;
-
-// The markers are buffered before they are sent to the marker device.
-// The marker is transferred from the buffer to the device SCHEDULER_PRE_EMPT ms
-// before the marker' onset.
-const dur SCHEDULER_PRE_EMPT = 5ms;
-const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
+import zep_markers_settings; // Contains all the configuration
 
 // Sends the marker at a specified time with an optional pulse length.
 // Returns true at successful setup
-bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
+// THIS IS THE FUNCTION YOU WILL LIKELY WANT TO SUE
+bool setup_marker_at(int number, time onset, dur pulse_length = zep_markers_settings::PULSE_LENGTH)
 {
     Marker new_marker;
     new_marker.number       = number;
@@ -72,11 +49,13 @@ bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
 
 // Sends the marker as quickly as possible
 // Returns true at successful setup
-bool send_marker(int number, dur pulse_length = PULSE_LENGTH)
+bool send_marker(int number, dur pulse_length = zep_markers_settings::PULSE_LENGTH)
 {
     bool succes_flag = setup_marker_at(
             number,
-            now() + SCHEDULER_PRE_EMPT + SCHEDULER_PRE_EMPT_ERROR_TOLERANCE,
+            now() 
+            + zep_markers_settings::SCHEDULER_PRE_EMPT 
+            + zep_markers_settings::SCHEDULER_PRE_EMPT_ERROR_TOLERANCE,
             pulse_length
             );
     return succes_flag;
@@ -90,7 +69,7 @@ record Marker
     dur pulse_length;
 }
 
-// Container and communication interface for the BeexyBox X
+// Container and communication interface for the parallel port
 SPP marker_device
 {
     // members
@@ -108,7 +87,7 @@ SPP marker_device
     void setup()
     {
         // warn if in development mode
-        if(DEVELOP_MODE)
+        if(zep_markers_settings::DEVELOP_MODE)
             print_error("!! WARNING - "
                     "Marker module is in develop mode, does not require a box"
                     " but will print and NOT output markers !!\n"
@@ -119,10 +98,10 @@ SPP marker_device
         if(error()) return;
 
         // init some variables
-        mask_bit_size         = NUMBER_OF_OUTPUT_LINES_DEVICE;
+        mask_bit_size = zep_markers_settings::NUMBER_OF_OUTPUT_LINES_DEVICE;
         this.set_log_file_number(0);
         maximum_marker_number = int(exp(2,mask_bit_size))-1;
-        init_time             = now();
+        init_time = now();
 
         // Start the log file.
         setup_log();
@@ -141,10 +120,10 @@ SPP marker_device
     }
 
     // Opens up the connection to the port
-    void start_port(int port_number = PORT_NUMBER)
+    void start_port(int port_number = zep_markers_settings::PORT_NUMBER)
     {
         // Develop mode works without using an actual SPP
-        if(DEVELOP_MODE) return;
+        if(zep_markers_settings::DEVELOP_MODE) return;
 
         this.open(port_number);
 
@@ -164,11 +143,11 @@ SPP marker_device
         println("TODO: IMPLEMENT set_marker_timers");
     }
 
-    // Initialises transfer and logging of marker.
+    // Initialises pre-empting and logging of marker.
     void mark(Marker mark)
     {
         // TRANSFER it
-        if(DEVELOP_MODE)
+        if(zep_markers_settings::DEVELOP_MODE)
             println(
                 "[DEVELOP_MODE] Simulate marker " + mark.number + ":\n"
                 + "pre-empt time:\t"
@@ -183,7 +162,7 @@ SPP marker_device
         this.log_marker(mark, true, "transferred");
     }
 
-    // Start log and log header info.
+    // Start log and log the header info.
     void setup_log()
     {
         string header = "date;target_timing(ms);marker;status\r\n";
