@@ -26,7 +26,7 @@ HISTORY:
 
 \******************************************************************************/
 
-plugin zep_iobeexybox;
+plugin zep_iospp;
 plugin zep_math;
 plugin zep_file;
 
@@ -34,27 +34,21 @@ plugin zep_file;
 // The module will use an internal dummy transfer and make prints instead
 // of outputting triggers.
 //!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
-const bool DEVELOP_MODE = false;
+const bool DEVELOP_MODE = true;
 
-// If set to "" the module will let the BeexyBox object decide the Beexybox.
-// If multiple are connected this might result in the wrong Beexybox being open
-// To counteract you can set the serial of the device here:
-const string DEVICE_SERIAL = "";
-
-// This is the target device type that is expected to be found.
-// most of the times this should be set to specify the X type.
-const BeexyBoxType TARGET_DEVICE_TYPE = BXY_DEVICE_TYPE_X;
+// This is the address of the parallel port you want to use the exact number you
+// want here is dependent on the specifics the specific setup. Under Linux OS
+// this refers to the /dev/parportX files where X is the PORT_NUMBER
+const int PORT_NUMBER = 0;
 
 // The number of input / trigger lines at the receiving end define the minimum
 // and maximum integer the device can send.
 // For the BioSemi equipment this number of lines are 8.
-// Hence we it only makes sense to output on 8 out of the 10 output lines that
-// are available on the BeexyBox X.
 const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
 
 // Length that the marker needs to be active in order to be registered
-// default: 10ms
-const dur PULSE_LENGTH = 10ms;
+// default: 5ms
+const dur PULSE_LENGTH = 5ms;
 
 // The markers are buffered before they are sent to the marker device.
 // The marker is transferred from the buffer to the device SCHEDULER_PRE_EMPT ms
@@ -70,20 +64,22 @@ bool setup_marker_at(int number, time onset, dur pulse_length = PULSE_LENGTH)
     new_marker.number       = number;
     new_marker.onset        = onset;
     new_marker.pulse_length = pulse_length;
-    if (!scheduler.add(new_marker)) return false;
-
-    return true;
+    
+    bool succes_flag = scheduler.add(new_marker);
+    
+    return succes_flag;
 }
 
 // Sends the marker as quickly as possible
 // Returns true at successful setup
 bool send_marker(int number, dur pulse_length = PULSE_LENGTH)
 {
-    return setup_marker_at(
+    bool succes_flag = setup_marker_at(
             number,
             now() + SCHEDULER_PRE_EMPT + SCHEDULER_PRE_EMPT_ERROR_TOLERANCE,
             pulse_length
             );
+    return succes_flag;
 }
 
 // Record to hold Marker information ( for internal module usage )
@@ -95,11 +91,11 @@ record Marker
 }
 
 // Container and communication interface for the BeexyBox X
-BeexyBox marker_device
+SPP marker_device
 {
     // members
     int mask_bit_size;
-    int max_number;
+    int maximum_marker_number;
     int log_file_number;
     time init_time;
 
@@ -119,14 +115,14 @@ BeexyBox marker_device
                     );
 
         // lets start up the party
-        start_device();
+        start_port();
         if(error()) return;
 
         // init some variables
-        mask_bit_size   = NUMBER_OF_OUTPUT_LINES_DEVICE;
+        mask_bit_size         = NUMBER_OF_OUTPUT_LINES_DEVICE;
         this.set_log_file_number(0);
-        max_number      = int(exp(2,mask_bit_size))-1;
-        init_time       = now();
+        maximum_marker_number = int(exp(2,mask_bit_size))-1;
+        init_time             = now();
 
         // Start the log file.
         setup_log();
@@ -144,52 +140,28 @@ BeexyBox marker_device
         log_file_number = number;
     }
 
-    // Opens up the connection to the BeexyBox device
-    void start_device(string device_serial = DEVICE_SERIAL, BeexyBoxType device_type = TARGET_DEVICE_TYPE)
+    // Opens up the connection to the port
+    void start_port(int port_number = PORT_NUMBER)
     {
-        // Develop mode works without using an actual BeexyBox
+        // Develop mode works without using an actual SPP
         if(DEVELOP_MODE) return;
 
-        if(device_serial != "")
-            this.open(device_type, device_serial);
-        else
-            this.open(device_type);
+        this.open(port_number);
 
         if(!this.is_open)
         {
-            if(device_serial == "")
-                print_error("!! ERROR - "
-                        + "Marker module was unable to open" + cast<BeexyBoxType>(device_type) + " device !!\n"
-                        );
-            else
-                print_error("!! ERROR - "
-                        + "Marker module was unable to open " + cast<BeexyBoxType>(device_type) + " "
-                        + device_serial
-                        + " !!\n"
-                        );
+            print_error("!! ERROR - "
+                    + "Marker module was unable to open port "
+                    + port_number
+                    + " !!\n"
+                    );
         }
     }
-
-    /*
-    * Tranfers the marker to the device
-    *
-    * Uses a bit wise operation:
-    * For example for marker 3 (int) or 000000011 (byte)
-    * it left shifts 1 (int) output_line times and does an AND operation
-    * over both this shifted and the marker byte. For output_line 1:
-    * 000000011 (marker byte)
-    * 000000010 (left-shifted line)
-    * 000000010 <= NOT 0 so true; we need to set this output line.
-     */
-    void transfer_marker(Marker mark)
+    
+    // Initiate the onset and offset timers for the marker
+    void set_marker_timers(Marker mark)
     {
-        int output_line = 0;
-        while(output_line < this.mask_bit_size)
-        {
-            if(mark.number & (1 << output_line))
-                this.start_output(output_line, mark.onset, mark.pulse_length);
-            output_line++;
-        }
+        println("TODO: IMPLEMENT set_marker_timers");
     }
 
     // Initialises transfer and logging of marker.
@@ -198,14 +170,14 @@ BeexyBox marker_device
         // TRANSFER it
         if(DEVELOP_MODE)
             println(
-                "[DEVELOP_MODE] Simulate marker " + mark.number + " transfer:\n"
-                + "transfer time:\t"
+                "[DEVELOP_MODE] Simulate marker " + mark.number + ":\n"
+                + "pre-empt time:\t"
                 + format_wt(now(), TIME_FORMAT_TIME_HHMMSS_MICROS) + "\n"
                 + "planned onset:\t"
                 + format_wt(mark.onset, TIME_FORMAT_TIME_HHMMSS_MICROS)
             );
         else
-            this.transfer_marker(mark);
+            this.set_marker_timers(mark);
 
         // LOG it
         this.log_marker(mark, true, "transferred");
@@ -260,13 +232,13 @@ BeexyBox marker_device
 // Scheduler that connects to related functions
 Timer scheduler {
     // Members
-    Marker[..] scheduled_markers; // The wonders of arrays.
-    Marker transferred_marker;
+    Marker[..] marker_schedule; // The wonders of arrays.
+    Marker pre_empted_marker;
 
     on_event:init()
     {
-        scheduled_markers.size      = 0;
-        scheduled_markers.capacity  = 5;
+        marker_schedule.size      = 0;
+        marker_schedule.capacity  = 5;
     }
 
     on_event:expire()
@@ -290,9 +262,9 @@ Timer scheduler {
         }
         else
         {
-            // all is well so transfer the marker to device
+            // all is well so it's marking time!
             marker_device.mark(next_in_line);
-            this.transferred_marker = next_in_line;
+            this.pre_empted_marker = next_in_line;
         }
         reschedule();
     }
@@ -301,9 +273,9 @@ Timer scheduler {
     void reschedule()
     {
         // Just stop if we ran out of markers
-        if(scheduled_markers.size == 0) return;
+        if(marker_schedule.size == 0) return;
 
-        Marker next_in_line = scheduled_markers[scheduled_markers.size-1];
+        Marker next_in_line = marker_schedule[marker_schedule.size-1];
         time next_in_line_scheduler_onset =
                 next_in_line.onset - SCHEDULER_PRE_EMPT;
 
@@ -314,9 +286,8 @@ Timer scheduler {
             return;
 
         time current_time = now();
-        // we are too late! Oh noes!
         if(next_in_line_scheduler_onset <= current_time)
-        {
+        { // we are too late! Oh noes!
             print_error("!! ERROR Overloading - Marker "
                     + next_in_line.number
                     + " failed to be scheduled to pre-empt on time ("
@@ -358,8 +329,8 @@ Timer scheduler {
     // Returns the next in line marker and removes it from the stack
     Marker pop()
     {
-        Marker popped = scheduled_markers[scheduled_markers.size-1];
-        scheduled_markers.size = scheduled_markers.size-1;
+        Marker popped = marker_schedule[marker_schedule.size-1];
+        marker_schedule.size = marker_schedule.size-1;
         return popped;
     }
 
@@ -376,11 +347,13 @@ Timer scheduler {
     bool valid_attributes(Marker mark)
     {
         // check number range
-        if(mark.number < 1 || mark.number > marker_device.max_number )
+        if(mark.number < 1 || mark.number > marker_device.maximum_marker_number )
         {
             print_error("!! WARNING - Marker "
                     + string(mark.number)
-                    + " is outside of range (1-255) !!\n"
+                    + " is outside of range (1-"
+                    + string(marker_device.maximum_marker_number)
+                    + ") !!\n"
                     );
             return false;
         }
@@ -400,8 +373,9 @@ Timer scheduler {
     }
 
     /*
-    * Checks the timing to see if there are no conflicts with buffered or scheduled markers
-    * It does so more efficiently by assuming the stack buffer is ordered
+    * Checks the timing to see if there are no conflicts with buffered or
+    * scheduled markers. It does so more efficiently by assuming the stack
+    * buffer is ordered based on onset timing.
     */
     bool valid_timing(Marker candidate_mark)
     {
@@ -410,28 +384,28 @@ Timer scheduler {
 
         // Check against the transered marker (the one currently loaded into the device)
         time transferred_offset =
-                transferred_marker.onset + transferred_marker.pulse_length;
+                pre_empted_marker.onset + pre_empted_marker.pulse_length;
 
         if( transferred_offset >= candidate_scheduler_onset )
         {
             print_error("!! WARNING - Marker "
                     + string(candidate_mark.number)
                     + "'s onset conflicts with a marker ("
-                    + transferred_marker.number
+                    + pre_empted_marker.number
                     + ") that has already been pre-empteed to the device !!\n"
                     );
             return false;
         }
 
         int index = 0;
-        while(index < scheduled_markers.size)
+        while(index < marker_schedule.size)
         {
 
             time scheduled_scheduler_onset =
-                    scheduled_markers[index].onset - SCHEDULER_PRE_EMPT;
+                    marker_schedule[index].onset - SCHEDULER_PRE_EMPT;
             time scheduled_offset =
-                    scheduled_markers[index].onset +
-                    scheduled_markers[index].pulse_length;
+                    marker_schedule[index].onset +
+                    marker_schedule[index].pulse_length;
 
             if(overlap(scheduled_scheduler_onset,
                         scheduled_offset,
@@ -443,7 +417,7 @@ Timer scheduler {
                 print_error("!! WARNING - Marker "
                         + string(candidate_mark.number)
                         + "'s onset conflicts with a marker ("
-                        + scheduled_markers[index].number
+                        + marker_schedule[index].number
                         + ") that has already been scheduled !!\n"
                         );
 
@@ -456,26 +430,26 @@ Timer scheduler {
         return true;
     }
 
-    // insert a marker to the scheduled_markers
+    // insert a marker to the marker schedule
     void insert_marker(Marker mark)
     {
         // add marker to the top of the stack
-        scheduled_markers.size = scheduled_markers.size+1;
-        scheduled_markers[scheduled_markers.size-1] = mark;
+        marker_schedule.size = marker_schedule.size+1;
+        marker_schedule[marker_schedule.size-1] = mark;
 
         // Move the inserted item into position.
-        int index = scheduled_markers.size - 1;
+        int index = marker_schedule.size - 1;
         Marker current_mark;
         Marker lower_mark;
         while(index >= 1)
         {
-            current_mark = scheduled_markers[index];
-            lower_mark = scheduled_markers[index - 1];
+            current_mark = marker_schedule[index];
+            lower_mark = marker_schedule[index - 1];
             if(current_mark.onset > lower_mark.onset) // first come first serve
-                scheduled_markers.swap(index, index - 1);
+                marker_schedule.swap(index, index - 1);
             else
                 // We can stop because we operate at the assumption
-                // the stack is already in order
+                // the stack is already in temporal order
                 return;
             index--;
         }
@@ -501,10 +475,10 @@ Timer scheduler {
                 ":"
                 );
         println("index\tmarker\tonset(hh:mm:ss...)\tpulse_length");
-        int index = scheduled_markers.size-1;
+        int index = marker_schedule.size-1;
         while(index >= 0)
         {
-            Marker m = scheduled_markers[index];
+            Marker m = marker_schedule[index];
             println(
                     string(index)
                     + ": \t" + string(m.number)
