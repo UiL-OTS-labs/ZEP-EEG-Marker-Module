@@ -1,0 +1,46 @@
+/******************************************************************************\
+FILE:           zep_markers_settings.zm
+AUTHOR:         Chris van Run <C.P.A.vanrun@uu.nl>
+GITHUB:         https://github.com/UiL-OTS-labs/ZEP-Markers-Module
+ADAPTED BY:     -
+
+DESCRIPTION:
+
+This Zep module provides a scope for the configuration settings for the markers
+
+ATTENTION:
+For USAGE instruction or more information read the README.md or visit the github
+link above.
+
+HISTORY:
+2017-12-05 CvR Created.
+\******************************************************************************/
+
+// Set this mode if you need to develop or debug without having a BeexyBox
+// The module will use an internal dummy transfer and make prints instead
+// of outputting triggers.
+//!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
+const bool DEVELOP_MODE = false;
+
+// This is the address of the parallel port you want to use the exact number you
+// want here is dependent on the specifics the specific setup. Under Linux OS
+// this refers to the /dev/parportX files where X is the PORT_NUMBER
+const int PORT_NUMBER = 0;
+
+// The number of input / trigger lines at the receiving end define the minimum
+// and maximum integer the device can send.
+// For the BioSemi equipment this number of lines are 8.
+const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
+
+// Length that the marker needs to be active in order to be registeredgit
+// default: 5ms
+const dur PULSE_LENGTH = 5ms;
+
+// The markers are buffered before they are sent to the marker device.
+// The marker is transferred from the buffer to the device SCHEDULER_PRE_EMPT ms
+// before the marker' onset.
+const dur SCHEDULER_PRE_EMPT = 5ms;
+const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
+
+// The 
+const dur THRESHOLD_INCORRECT_TIMING = 50us;
