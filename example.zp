@@ -3,10 +3,6 @@
 import zep_markers;
 
 start() {
-    // To test if the BeexyBox X and Beexybox B can work together uncomment
-    // the next line
-    //open_secondary_beexybox();
-
     println("#### Running some tests ####");
 
     time tref = now();

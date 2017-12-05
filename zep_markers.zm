@@ -23,6 +23,7 @@ HISTORY:
 2017-06-12 CvR Adjusted and tested with BioSemi equipment.
 2017-06-15 CvR Added develop mode.
 2017-06-26 CvR Rewrite and refactor for zep 2.0
+2017-12-05 CvR Rewrite and refactor to use a parallel port
 
 \******************************************************************************/
 

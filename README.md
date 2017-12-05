@@ -8,6 +8,9 @@ Markers are setup sometime before their required onset. The timers can hold one 
 *   [Zep version 2.0.9 or later](https://beexy.nl/zep2/wiki/doku.php?id=get_zep)
 *   A parallel port (either via a PCIe peripheral or directoy from the motherboard).
 
+## How to test this module
+Simply run `zep-2.0 example.zp` and review to see some common functionality.
+
 ## How to use this module
 1.  Copy the files `zep_markers.zm` and `zep_markers_settings.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
 2.  Within your experiment import the module by adding `import zep_markers;` to
