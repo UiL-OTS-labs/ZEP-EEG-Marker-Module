@@ -6,10 +6,10 @@ Markers are setup sometime before their required onset. The timers can hold one 
 
 ## Requirements for this module
 *   [Zep version 2.0.9 or later](https://beexy.nl/zep2/wiki/doku.php?id=get_zep)
-*   A parallel port (either via a PCIe peripheral or directoy from the motherboard).
+*   A parallel port (either via a PCIe peripheral or a direct bus from the motherboard).
 
 ## How to test this module
-Simply run `zep-2.0 example.zp` and review to see some common functionality.
+Simply run `zep-2.0 example.zp` and investigate the `example.zp` file to review some functionality.
 
 ## How to use this module
 1.  Copy the files `zep_markers.zm` and `zep_markers_settings.zm` from this repository to a location found by your experiment (_e.g._ your experiment's `/modules` directory).
@@ -21,11 +21,13 @@ stimulus add the following function call:
     `setup_marker_at(<int marker>, <time tref>);`
 
     With _marker_ being the integer you want to send and _tref_ set to the _expected_start_time_ of the stimulus that has been set up.
-4.  Alternatively, you might want to send a marker as quickly as possible. Use the following function call for that:
+4.  _Alternatively_, you might want to send a marker as quickly as possible. Use the following function call for that:
 
     `send_marker(<int marker>);`
 
     This will set up a marker to be sent as quickly as possible. Because of internal logistics there is a minimum setup time for the marker. This setup is determined by the sum of `SCHEDULER_PRE_EMPT` and `SCHEDULER_PRE_EMPT_ERROR_TOLERANCE` settings. Using default settings this time is approx. 7.5ms.
+5.   _Alternatively_, if you want to incorporate a marker that is based on a response of the participant the best way to do this is to add a fixed delay between the response of the participant and the onset of the marker. When receiving the response at time `X` (e.g. `event_time` in Zep) use `setup_marker_at(RESPONSE, X+20ms)`. Using `send_marker(RESPONSE)` would introduce an _erroneous timing_ because there is a small but relevant latency jitter between the response-time registration and Zep handling the actual response event.
+
 
 ## Temporal Performance of Module
 There is a very short delay between the requested marker onset and the actual marker onset. On internal lab systems this delay was around 15 and 18 microseconds.

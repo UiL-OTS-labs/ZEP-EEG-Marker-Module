@@ -32,7 +32,7 @@ const int PORT_NUMBER = 0;
 // For the BioSemi equipment this number of lines are 8.
 const int NUMBER_OF_OUTPUT_LINES_DEVICE = 8;
 
-// Length that the marker needs to be active in order to be registered
+// Length that the marker needs to be active in order to be registeredgit
 // default: 5ms
 const dur PULSE_LENGTH = 5ms;
 
