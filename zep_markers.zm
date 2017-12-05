@@ -89,12 +89,15 @@ SPP marker_device
         // warn if in development mode
         if(zep_markers_settings::DEVELOP_MODE)
             print_error("!! WARNING - "
-                    "Marker module is in develop mode, does not require a box"
-                    " but will print and NOT output markers !!\n"
+                    "Marker module is in develop mode, does not require a"
+                    + "parallel port but will print and NOT output markers"
+                    + "!!\n"
                     );
 
         // lets start up the party
         start_port();
+        this.data_is_output = true; // setup the port to output
+        this.data_output_mask = 0xFF; // setup the output_mask to 0;
         if(error()) return;
 
         // init some variables
@@ -136,11 +139,48 @@ SPP marker_device
                     );
         }
     }
-    
+
     // Initiate the onset and offset timers for the marker
     void set_marker_timers(Marker mark)
     {
-        println("TODO: IMPLEMENT set_marker_timers");
+        marker_onset.mark = mark;
+        marker_onset.start(mark.onset);
+        marker_offset.start(mark.onset + mark.pulse_length);
+    }
+
+    Timer marker_onset
+    {
+        Marker mark;
+
+        on_event:expire()
+        {
+            marker_device.write_data(mark.number);
+
+            // check if timing is okay
+            bool is_error = false;
+            dur delay = now() - mark.onset;
+            if( delay >= zep_markers_settings::THRESHOLD_INCORRECT_TIMING )
+            {
+                print_error("!! ERROR - "
+                        + "Marker" + mark.number
+                        + " request was " +  mark.onset
+                        + " but the delay was " + string(delay) + " !!\n"
+                        );
+                marker_device.log_marker(mark, true, "delay: " + string(delay));
+            }
+            else
+            {
+                marker_device.log_marker(mark, false, "sent");
+            }
+        }
+    }
+
+    Timer marker_offset
+    {
+        on_event:expire()
+        {
+            marker_device.write_data(0x0);
+        }
     }
 
     // Initialises pre-empting and logging of marker.
@@ -157,9 +197,6 @@ SPP marker_device
             );
         else
             this.set_marker_timers(mark);
-
-        // LOG it
-        this.log_marker(mark, true, "transferred");
     }
 
     // Start log and log the header info.
@@ -203,8 +240,15 @@ SPP marker_device
         flush_log(log_file_number);
         close_log(log_file_number);
 
+        // Turn-off the connections
+        this.data_is_output = false;
+        this.data_output_mask = 0x0;
+
         // Close the connection to the device
-        this.close();
+        if(this.is_open)
+        {
+            this.close();
+        }
     }
 }
 

@@ -20,7 +20,7 @@ HISTORY:
 // The module will use an internal dummy transfer and make prints instead
 // of outputting triggers.
 //!! DO NOT FORGET TO DISABLE THIS WHEN RUNNING THE EXPERIMENT !!
-const bool DEVELOP_MODE = true;
+const bool DEVELOP_MODE = false;
 
 // This is the address of the parallel port you want to use the exact number you
 // want here is dependent on the specifics the specific setup. Under Linux OS
@@ -41,3 +41,6 @@ const dur PULSE_LENGTH = 5ms;
 // before the marker' onset.
 const dur SCHEDULER_PRE_EMPT = 5ms;
 const dur SCHEDULER_PRE_EMPT_ERROR_TOLERANCE = SCHEDULER_PRE_EMPT/2;
+
+// The 
+const dur THRESHOLD_INCORRECT_TIMING = 500us;
