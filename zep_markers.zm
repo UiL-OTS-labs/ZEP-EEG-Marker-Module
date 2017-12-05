@@ -337,7 +337,7 @@ Timer scheduler {
     {
         if(!valid_marker(mark))
         {
-            marker_device.log_marker(mark, false, "validation");
+            marker_device.log_marker(mark, false, "invalid");
             return false;
         }
 
@@ -405,7 +405,7 @@ Timer scheduler {
         time candidate_scheduler_onset = candidate_mark.onset - SCHEDULER_PRE_EMPT;
         time candidate_offset = candidate_mark.onset + candidate_mark.pulse_length;
 
-        // Check against the transered marker (the one currently loaded into the device)
+        // Check against the setup marker (the one currently loaded into the timers)
         time transferred_offset =
                 pre_empted_marker.onset + pre_empted_marker.pulse_length;
 
