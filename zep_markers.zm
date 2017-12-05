@@ -162,7 +162,7 @@ SPP marker_device
             if( delay >= zep_markers_settings::THRESHOLD_INCORRECT_TIMING )
             {
                 print_error("!! ERROR - "
-                        + "Marker" + mark.number
+                        + "Marker " + mark.number
                         + " request was " +  mark.onset
                         + " but the delay was " + string(delay) + " !!\n"
                         );
